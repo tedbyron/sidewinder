@@ -8,8 +8,7 @@
 )]
 #![doc = include_str!("../README.md")]
 
-use sidewinder::ppm;
+pub mod ppm;
+mod vec3;
 
-fn main() {
-    ppm::write(256, 256).unwrap();
-}
+pub use vec3::{Point3, Rgb};
