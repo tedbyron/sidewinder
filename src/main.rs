@@ -55,13 +55,11 @@ fn main() -> io::Result<()> {
             let u = f64::from(i) / (image_width_f - 1.0);
             let v = f64::from(j) / (image_height_f - 1.0);
 
-            let ray = Ray::new(
+            let r = Ray::new(
                 origin,
                 lower_left_corner + u * horizontal + v * vertical - origin,
             );
-            let color = ray.color();
-
-            color.write_rgb(&mut buf)?;
+            ray_color(&r).write_rgb(&mut buf)?;
         }
     }
 
@@ -69,4 +67,26 @@ fn main() -> io::Result<()> {
     eprintln!("PPM written in {}", HumanDuration(timer.elapsed()));
 
     Ok(())
+}
+
+#[inline]
+#[must_use]
+fn hit_sphere(center: Vec3, radius: f64, r: &Ray) -> bool {
+    let oc = r.origin - center;
+    let a = r.direction.dot(r.direction);
+    let b = 2.0 * oc.dot(r.direction);
+    let c = oc.dot(oc) - radius * radius;
+    let discriminant = b * b - 4.0 * a * c;
+    discriminant > 0.0
+}
+
+#[inline]
+#[must_use]
+fn ray_color(r: &Ray) -> Vec3 {
+    if hit_sphere(Vec3::new(0.0, 0.0, -1.0), 0.5, r) {
+        return Vec3::new(1.0, 0.0, 0.0);
+    }
+    let unit_direction = r.direction.unit();
+    let t = 0.5 * (unit_direction.y + 1.0);
+    Vec3::new(1.0, 1.0, 1.0).mul_add(1.0 - t, Vec3::new(0.5, 0.7, 1.0) * t)
 }

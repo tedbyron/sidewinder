@@ -17,17 +17,10 @@ impl Ray {
         Self { origin, direction }
     }
 
+    /// Calculate the
     #[inline]
     #[must_use]
     pub fn at(self, t: f64) -> Vec3 {
         self.direction.mul_add(t, self.origin)
-    }
-
-    #[inline]
-    #[must_use]
-    pub fn color(self) -> Vec3 {
-        let unit_direction = self.direction.unit();
-        let t = 0.5 * (unit_direction.y + 1.0);
-        Vec3::new(1.0, 1.0, 1.0).mul_add(1.0 - t, Vec3::new(0.5, 0.7, 1.0) * t)
     }
 }
