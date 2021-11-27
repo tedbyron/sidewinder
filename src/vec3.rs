@@ -228,3 +228,16 @@ impl ops::DivAssign<f64> for Vec3 {
         *self = *self / rhs;
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_mul_add() {
+        let base = Vec3::new(1.0, 2.0, 3.0);
+        let add = Vec3::new(3.0, 2.0, 1.0);
+
+        assert_eq!(base.mul_add(2.0, add), base * 2.0 + add);
+    }
+}

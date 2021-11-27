@@ -1,5 +1,8 @@
 use crate::vec3::Vec3;
 
+/// **P**(*t*) = **A** + *t***b** where **P** is a position along a 3D line, **A** is the ray
+/// origin, and **b** is the ray direction. Change *t*, the distance from the origin, to affect the
+/// color seen along the ray.
 #[non_exhaustive]
 #[derive(Debug, Default, Clone, Copy, PartialEq, PartialOrd)]
 pub struct Ray {
@@ -25,6 +28,6 @@ impl Ray {
     pub fn color(self) -> Vec3 {
         let unit_direction = self.direction.unit();
         let t = 0.5 * (unit_direction.y + 1.0);
-        Vec3::new(0.5, 0.7, 1.0).mul_add(t, (1.0 - t) * Vec3::default())
+        Vec3::new(1.0, 1.0, 1.0).mul_add(1.0 - t, Vec3::new(0.5, 0.7, 1.0) * t)
     }
 }
