@@ -9,6 +9,5 @@
 #![doc = include_str!("../README.md")]
 
 pub mod ppm;
-mod vec3;
-
-pub use vec3::{Point3, Rgb};
+pub mod ray;
+pub mod vec3;

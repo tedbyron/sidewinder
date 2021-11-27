@@ -3,119 +3,89 @@ use std::io;
 use std::ops;
 
 #[non_exhaustive]
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, PartialOrd)]
 pub struct Vec3 {
-    e0: f64,
-    e1: f64,
-    e2: f64,
+    pub x: f64,
+    pub y: f64,
+    pub z: f64,
 }
-
-pub type Point3 = Vec3;
-pub type Rgb = Vec3;
 
 impl Vec3 {
     #[inline]
     #[must_use]
-    pub const fn new(e0: f64, e1: f64, e2: f64) -> Self {
-        Self { e0, e1, e2 }
+    pub const fn new(x: f64, y: f64, z: f64) -> Self {
+        Self { x, y, z }
+    }
+
+    /// Fused multiply-add. Computes `(self * a) + b` with only one rounding error, yielding a more
+    /// accurate result than an unfused multiply-add.
+    ///
+    /// Using `mul_add` may be more performant than an unfused multiply-add if the target
+    /// architecture has a dedicated `fma` CPU instruction. However, this is not always true, and
+    /// will be heavily dependant on designing algorithms with specific target hardware in mind.
+    #[inline]
+    #[must_use]
+    pub fn mul_add(self, a: f64, b: Self) -> Self {
+        Self {
+            x: self.x.mul_add(a, b.x),
+            y: self.y.mul_add(a, b.y),
+            z: self.z.mul_add(a, b.z),
+        }
     }
 
     #[inline]
     #[must_use]
-    pub fn len_squared(&self) -> f64 {
-        self.e0
-            .mul_add(self.e0, self.e1.mul_add(self.e1, self.e2 * self.e2))
+    pub fn len_squared(self) -> f64 {
+        self.x
+            .mul_add(self.x, self.y.mul_add(self.y, self.z * self.z))
     }
     #[inline]
     #[must_use]
-    pub fn len(&self) -> f64 {
+    pub fn len(self) -> f64 {
         self.len_squared().sqrt()
     }
 
     #[inline]
     #[must_use]
-    pub fn dot(&self, rhs: Self) -> f64 {
-        self.e0
-            .mul_add(rhs.e0, self.e1.mul_add(rhs.e1, self.e2 * rhs.e2))
+    pub fn dot(self, rhs: Self) -> f64 {
+        self.x.mul_add(rhs.x, self.y.mul_add(rhs.y, self.z * rhs.z))
     }
     #[inline]
     #[must_use]
-    pub fn cross(&self, rhs: Self) -> Self {
+    pub fn cross(self, rhs: Self) -> Self {
         Self {
-            e0: self.e1.mul_add(rhs.e2, -(self.e2 * rhs.e1)),
-            e1: self.e2.mul_add(rhs.e0, -(self.e0 * rhs.e2)),
-            e2: self.e0.mul_add(rhs.e1, -(self.e1 * rhs.e0)),
+            x: self.y.mul_add(rhs.z, -(self.z * rhs.y)),
+            y: self.z.mul_add(rhs.x, -(self.x * rhs.z)),
+            z: self.x.mul_add(rhs.y, -(self.y * rhs.x)),
         }
     }
     #[inline]
     #[must_use]
-    pub fn unit(&self) -> Self {
-        *self / self.len()
+    pub fn unit(self) -> Self {
+        self / self.len()
     }
 
+    /// Write an RGB color represented by a [`Vec3`] into a buffer, using the input writer.
+    ///
+    /// # Errors
+    ///
+    /// If there is an error writing to stdout.
     #[allow(clippy::cast_possible_truncation)]
     #[inline]
-    pub fn write<W>(self, writer: &mut W) -> io::Result<()>
-    where
-        W: io::Write,
-    {
-        let ir = (255.999 * self.e0) as i32;
-        let ig = (255.999 * self.e1) as i32;
-        let ib = (255.999 * self.e2) as i32;
+    pub fn write_rgb<W: io::Write>(self, writer: &mut W) -> io::Result<()> {
+        let ir = (255.999 * self.x) as i32;
+        let ig = (255.999 * self.y) as i32;
+        let ib = (255.999 * self.z) as i32;
 
         writeln!(writer, "{} {} {}", ir, ig, ib)?;
         Ok(())
     }
 }
 
-impl Default for Vec3 {
-    #[inline]
-    #[must_use]
-    fn default() -> Self {
-        Self {
-            e0: f64::default(),
-            e1: f64::default(),
-            e2: f64::default(),
-        }
-    }
-}
-
 impl fmt::Display for Vec3 {
     #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} {} {}", self.e0, self.e1, self.e2)
-    }
-}
-
-impl ops::Index<usize> for Vec3 {
-    type Output = f64;
-
-    #[inline]
-    fn index(&self, index: usize) -> &Self::Output {
-        match index {
-            0 => &self.e0,
-            1 => &self.e1,
-            2 => &self.e2,
-            _ => panic!(
-                "index out of bounds: the len is 3 but the index is {}",
-                index
-            ),
-        }
-    }
-}
-
-impl ops::IndexMut<usize> for Vec3 {
-    #[inline]
-    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        match index {
-            0 => &mut self.e0,
-            1 => &mut self.e1,
-            2 => &mut self.e2,
-            _ => panic!(
-                "index out of bounds: the len is 3 but the index is {}",
-                index
-            ),
-        }
+        write!(f, "{} {} {}", self.x, self.y, self.z)
     }
 }
 
@@ -126,9 +96,9 @@ impl ops::Neg for Vec3 {
     #[must_use]
     fn neg(self) -> Self {
         Self {
-            e0: -self.e0,
-            e1: -self.e1,
-            e2: -self.e2,
+            x: -self.x,
+            y: -self.y,
+            z: -self.z,
         }
     }
 }
@@ -140,9 +110,9 @@ impl ops::Add for Vec3 {
     #[must_use]
     fn add(self, rhs: Self) -> Self {
         Self {
-            e0: self.e0 + rhs.e0,
-            e1: self.e1 + rhs.e1,
-            e2: self.e2 + rhs.e2,
+            x: self.x + rhs.x,
+            y: self.y + rhs.y,
+            z: self.z + rhs.z,
         }
     }
 }
@@ -161,9 +131,9 @@ impl ops::Sub for Vec3 {
     #[must_use]
     fn sub(self, rhs: Self) -> Self {
         Self {
-            e0: self.e0 - rhs.e0,
-            e1: self.e1 - rhs.e1,
-            e2: self.e2 - rhs.e2,
+            x: self.x - rhs.x,
+            y: self.y - rhs.y,
+            z: self.z - rhs.z,
         }
     }
 }
@@ -182,9 +152,9 @@ impl ops::Mul for Vec3 {
     #[must_use]
     fn mul(self, rhs: Self) -> Self {
         Self {
-            e0: self.e0 * rhs.e0,
-            e1: self.e1 * rhs.e1,
-            e2: self.e2 * rhs.e2,
+            x: self.x * rhs.x,
+            y: self.y * rhs.y,
+            z: self.z * rhs.z,
         }
     }
 }
@@ -196,9 +166,9 @@ impl ops::Mul<f64> for Vec3 {
     #[must_use]
     fn mul(self, rhs: f64) -> Self {
         Self {
-            e0: self.e0 * rhs,
-            e1: self.e1 * rhs,
-            e2: self.e2 * rhs,
+            x: self.x * rhs,
+            y: self.y * rhs,
+            z: self.z * rhs,
         }
     }
 }
@@ -210,9 +180,9 @@ impl ops::Mul<Vec3> for f64 {
     #[must_use]
     fn mul(self, rhs: Vec3) -> Self::Output {
         Vec3 {
-            e0: self * rhs.e0,
-            e1: self * rhs.e1,
-            e2: self * rhs.e2,
+            x: self * rhs.x,
+            y: self * rhs.y,
+            z: self * rhs.z,
         }
     }
 }
@@ -220,11 +190,7 @@ impl ops::Mul<Vec3> for f64 {
 impl ops::MulAssign<f64> for Vec3 {
     #[inline]
     fn mul_assign(&mut self, rhs: f64) {
-        *self = Self {
-            e0: self.e0 * rhs,
-            e1: self.e1 * rhs,
-            e2: self.e2 * rhs,
-        }
+        *self = *self * rhs;
     }
 }
 
@@ -235,9 +201,9 @@ impl ops::Div for Vec3 {
     #[must_use]
     fn div(self, rhs: Self) -> Self {
         Self {
-            e0: self.e0 / rhs.e0,
-            e1: self.e1 / rhs.e1,
-            e2: self.e2 / rhs.e2,
+            x: self.x / rhs.x,
+            y: self.y / rhs.y,
+            z: self.z / rhs.z,
         }
     }
 }
@@ -249,9 +215,9 @@ impl ops::Div<f64> for Vec3 {
     #[must_use]
     fn div(self, rhs: f64) -> Self {
         Self {
-            e0: self.e0 / rhs,
-            e1: self.e1 / rhs,
-            e2: self.e2 / rhs,
+            x: self.x / rhs,
+            y: self.y / rhs,
+            z: self.z / rhs,
         }
     }
 }
@@ -259,10 +225,6 @@ impl ops::Div<f64> for Vec3 {
 impl ops::DivAssign<f64> for Vec3 {
     #[inline]
     fn div_assign(&mut self, rhs: f64) {
-        *self = Self {
-            e0: self.e0 / rhs,
-            e1: self.e1 / rhs,
-            e2: self.e2 / rhs,
-        }
+        *self = *self / rhs;
     }
 }

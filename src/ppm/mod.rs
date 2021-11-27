@@ -3,7 +3,7 @@ use std::time::Instant;
 
 use indicatif::{HumanDuration, ProgressIterator as _};
 
-use crate::Rgb;
+use crate::vec3::Vec3;
 
 /// Write a PPM file to the standard output stream.
 ///
@@ -25,13 +25,13 @@ pub fn write(width: u32, height: u32) -> io::Result<()> {
     // Write pixel information.
     for j in (0..height).rev().progress() {
         for i in 0..width {
-            let rgb = Rgb::new(
+            let color = Vec3::new(
                 f64::from(i) / f64::from(width - 1),
                 f64::from(j) / f64::from(height - 1),
                 0.25,
             );
 
-            rgb.write(&mut buf)?;
+            color.write_rgb(&mut buf)?;
         }
     }
 
