@@ -10,6 +10,9 @@ pub struct Vec3 {
     pub z: f64,
 }
 
+pub type Point = Vec3;
+pub type Rgb = Vec3;
+
 impl Vec3 {
     #[inline]
     #[must_use]
@@ -35,7 +38,7 @@ impl Vec3 {
 
     #[inline]
     #[must_use]
-    pub fn len_squared(self) -> f64 {
+    fn len_squared(self) -> f64 {
         self.x
             .mul_add(self.x, self.y.mul_add(self.y, self.z * self.z))
     }
@@ -72,7 +75,7 @@ impl Vec3 {
     /// If there is an error writing to stdout.
     #[allow(clippy::cast_possible_truncation)]
     #[inline]
-    pub fn write_rgb<W: io::Write>(self, writer: &mut W) -> io::Result<()> {
+    pub fn write<W: io::Write>(self, writer: &mut W) -> io::Result<()> {
         let ir = (255.999 * self.x) as i32;
         let ig = (255.999 * self.y) as i32;
         let ib = (255.999 * self.z) as i32;

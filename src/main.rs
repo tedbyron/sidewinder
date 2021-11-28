@@ -14,7 +14,7 @@ use std::time::Instant;
 use indicatif::{HumanDuration, ProgressIterator as _};
 
 use sidewinder::ray::Ray;
-use sidewinder::vec3::Vec3;
+use sidewinder::vec3::{Point, Rgb, Vec3};
 
 fn main() -> io::Result<()> {
     // Image
@@ -32,7 +32,7 @@ fn main() -> io::Result<()> {
     let viewport_width = aspect_ratio * viewport_height;
     let focal_length = 1.0;
 
-    let origin = Vec3::default();
+    let origin = Point::default();
     let horizontal = Vec3::new(viewport_width, 0.0, 0.0);
     let vertical = Vec3::new(0.0, viewport_height, 0.0);
     let lower_left_corner =
@@ -44,7 +44,7 @@ fn main() -> io::Result<()> {
 
     let stdout = io::stdout();
     let lock = stdout.lock();
-    let mut buf = io::BufWriter::new(lock); // TODO: make faster with_capacity?
+    let mut buf = io::BufWriter::new(lock); // TODO: calculate buffer capacity first?
 
     // Write header information.
     writeln!(&mut buf, "P3\n{} {}\n255", image_width, image_height)?;
@@ -59,7 +59,9 @@ fn main() -> io::Result<()> {
                 origin,
                 lower_left_corner + u * horizontal + v * vertical - origin,
             );
-            ray_color(&r).write_rgb(&mut buf)?;
+            let color = ray_color(&r);
+
+            color.write(&mut buf)?;
         }
     }
 
@@ -69,24 +71,34 @@ fn main() -> io::Result<()> {
     Ok(())
 }
 
+#[allow(clippy::shadow_unrelated)]
 #[inline]
 #[must_use]
-fn hit_sphere(center: Vec3, radius: f64, r: &Ray) -> bool {
-    let oc = r.origin - center;
-    let a = r.direction.dot(r.direction);
-    let b = 2.0 * oc.dot(r.direction);
-    let c = oc.dot(oc) - radius * radius;
-    let discriminant = b * b - 4.0 * a * c;
-    discriminant > 0.0
+fn ray_color(r: &Ray) -> Rgb {
+    let t = hit_sphere(Point::new(0.0, 0.0, -1.0), 0.5, r);
+    if t > 0.0 {
+        let n = (r.at(t) - Vec3::new(0.0, 0.0, -1.0)).unit();
+        return 0.5 * Rgb::new(n.x + 1.0, n.y + 1.0, n.z + 1.0);
+    }
+
+    let unit_direction = r.direction.unit();
+    let t = 0.5 * (unit_direction.y + 1.0);
+    // (1.0 - t) * Rgb::new(1.0, 1.0, 1.0) + t * Rgb::new(0.5, 0.7, 1.0)
+    Rgb::new(1.0, 1.0, 1.0).mul_add(1.0 - t, Rgb::new(0.5, 0.7, 1.0) * t)
 }
 
 #[inline]
 #[must_use]
-fn ray_color(r: &Ray) -> Vec3 {
-    if hit_sphere(Vec3::new(0.0, 0.0, -1.0), 0.5, r) {
-        return Vec3::new(1.0, 0.0, 0.0);
+fn hit_sphere(center: Point, radius: f64, r: &Ray) -> f64 {
+    let oc = r.origin - center;
+    let a = r.direction.dot(r.direction);
+    let b = 2.0 * oc.dot(r.direction);
+    let c = radius.mul_add(-radius, oc.dot(oc)); // oc.dot(oc) - radius * radius
+    let discriminant = b.mul_add(b, -4.0 * a * c); // b * b - 4.0 * a * c
+
+    if discriminant < 0.0 {
+        -1.0
+    } else {
+        (-b - discriminant.sqrt()) / (2.0 * a)
     }
-    let unit_direction = r.direction.unit();
-    let t = 0.5 * (unit_direction.y + 1.0);
-    Vec3::new(1.0, 1.0, 1.0).mul_add(1.0 - t, Vec3::new(0.5, 0.7, 1.0) * t)
 }
