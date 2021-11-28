@@ -13,21 +13,20 @@ use std::rc::Rc;
 use std::time::Instant;
 
 use indicatif::{HumanDuration, ProgressIterator as _};
+use rand::Rng;
 
-use sidewinder::hit::{HitList, HitRecord};
-use sidewinder::ray::Ray;
-use sidewinder::sphere::Sphere;
-use sidewinder::vec3::{Point, Rgb, Vec3};
+use sidewinder::{Camera, HitList, HitRecord, Point, Ray, Rgb, Sphere};
 
 fn main() -> io::Result<()> {
     // Image
 
     let aspect_ratio = 16.0 / 9.0;
-    let image_width = 400;
+    let image_width = 1920;
     let image_width_f = f64::from(image_width);
     let image_height_f = f64::from(image_width) / aspect_ratio;
     #[allow(clippy::cast_possible_truncation)]
     let image_height = image_height_f as i32;
+    let samples_per_pixel = 100;
 
     // World
 
@@ -37,15 +36,7 @@ fn main() -> io::Result<()> {
 
     // Camera
 
-    let viewport_height = 2.0;
-    let viewport_width = aspect_ratio * viewport_height;
-    let focal_length = 1.0;
-
-    let origin = Point::default();
-    let horizontal = Vec3::new(viewport_width, 0.0, 0.0);
-    let vertical = Vec3::new(0.0, viewport_height, 0.0);
-    let lower_left_corner =
-        origin - (horizontal / 2.0) - (vertical / 2.0) - Vec3::new(0.0, 0.0, focal_length);
+    let camera = Camera::new(aspect_ratio);
 
     // Render
 
@@ -55,22 +46,25 @@ fn main() -> io::Result<()> {
     let lock = stdout.lock();
     let mut buf = io::BufWriter::new(lock); // TODO: calculate buffer capacity first?
 
-    // Write header information.
     writeln!(&mut buf, "P3\n{} {}\n255", image_width, image_height)?;
+
+    let mut pixel_color;
+    let mut rng = rand::thread_rng();
 
     // Write pixel information.
     for j in (0..image_height).rev().progress() {
         for i in 0..image_width {
-            let u = f64::from(i) / (image_width_f - 1.0);
-            let v = f64::from(j) / (image_height_f - 1.0);
+            pixel_color = Rgb::default();
 
-            let r = Ray::new(
-                origin,
-                lower_left_corner + u * horizontal + v * vertical - origin,
-            );
-            let color = ray_color(&r, &world);
+            for _ in 0..samples_per_pixel {
+                let u = (f64::from(i) + rng.gen::<f64>()) / (image_width_f - 1.0);
+                let v = (f64::from(j) + rng.gen::<f64>()) / (image_height_f - 1.0);
 
-            color.write(&mut buf)?;
+                let r = camera.get_ray(u, v);
+                pixel_color += ray_color(&r, &world);
+            }
+
+            pixel_color.write(&mut buf, samples_per_pixel)?;
         }
     }
 
@@ -92,18 +86,3 @@ fn ray_color(r: &Ray, world: &HitList<Sphere>) -> Rgb {
     // (1.0 - t) * Rgb::new(1.0, 1.0, 1.0) + t * Rgb::new(0.5, 0.7, 1.0)
     Rgb::new(1.0, 1.0, 1.0).mul_add(1.0 - t, Rgb::new(0.5, 0.7, 1.0) * t)
 }
-
-// fn hit_sphere(center: Point, radius: f64, r: &Ray) -> f64 {
-//     let oc = r.origin - center;
-//     // Quadratic equation.
-//     let a = r.direction.len_squared();
-//     let half_b = oc.dot(r.direction);
-//     let c = radius.mul_add(-radius, oc.len_squared()); // oc.len_squared() - radius * radius
-//     let discriminant = half_b.mul_add(half_b, -(a * c)); // half_b * half_b - a * c
-
-//     if discriminant < 0.0 {
-//         -1.0
-//     } else {
-//         (-half_b - discriminant.sqrt()) / a
-//     }
-// }

@@ -22,6 +22,7 @@ pub enum Face {
 }
 
 impl Default for Face {
+    #[inline]
     fn default() -> Self {
         Self::Back
     }

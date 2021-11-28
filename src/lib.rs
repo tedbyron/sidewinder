@@ -8,7 +8,14 @@
 )]
 #![doc = include_str!("../README.md")]
 
-pub mod hit;
-pub mod ray;
-pub mod sphere;
-pub mod vec3;
+mod camera;
+mod hit;
+mod ray;
+mod sphere;
+mod vec3;
+
+pub use camera::Camera;
+pub use hit::{HitList, HitRecord};
+pub use ray::Ray;
+pub use sphere::Sphere;
+pub use vec3::{Point, Rgb, Vec3};

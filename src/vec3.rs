@@ -75,12 +75,14 @@ impl Vec3 {
     /// If there is an error writing to stdout.
     #[allow(clippy::cast_possible_truncation)]
     #[inline]
-    pub fn write<W: io::Write>(self, writer: &mut W) -> io::Result<()> {
-        let ir = (255.999 * self.x) as i32;
-        let ig = (255.999 * self.y) as i32;
-        let ib = (255.999 * self.z) as i32;
+    pub fn write<W: io::Write>(self, writer: &mut W, samples: u32) -> io::Result<()> {
+        let scale = f64::from(samples).recip();
 
-        writeln!(writer, "{} {} {}", ir, ig, ib)?;
+        let r = (256.0 * (self.x * scale).clamp(0.0, 0.999)) as i32;
+        let g = (256.0 * (self.y * scale).clamp(0.0, 0.999)) as i32;
+        let b = (256.0 * (self.z * scale).clamp(0.0, 0.999)) as i32;
+
+        writeln!(writer, "{} {} {}", r, g, b)?;
         Ok(())
     }
 }
