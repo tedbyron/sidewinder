@@ -2,7 +2,7 @@ use std::fmt;
 use std::io;
 use std::ops;
 
-use rand::distributions::{Distribution, Uniform};
+use rand::distributions::Distribution;
 use rand::prelude::ThreadRng;
 
 #[non_exhaustive]
