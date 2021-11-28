@@ -8,5 +8,7 @@
 )]
 #![doc = include_str!("../README.md")]
 
+pub mod hit;
 pub mod ray;
+pub mod sphere;
 pub mod vec3;

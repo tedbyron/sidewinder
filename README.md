@@ -3,6 +3,8 @@
   <p><strong>Rust path tracer.</strong></p>
 </div>
 
+![Adding multiple objects to the scene](./img/6.7.png)
+
 ![Adding a surface normal to the sphere](./img/6.1.png)
 
 ![Adding a sphere object to the scene](./img/5.2.png)

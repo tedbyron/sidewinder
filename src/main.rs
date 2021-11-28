@@ -9,22 +9,31 @@
 #![doc = include_str!("../README.md")]
 
 use std::io::{self, Write as _};
+use std::rc::Rc;
 use std::time::Instant;
 
 use indicatif::{HumanDuration, ProgressIterator as _};
 
+use sidewinder::hit::{HitList, HitRecord};
 use sidewinder::ray::Ray;
+use sidewinder::sphere::Sphere;
 use sidewinder::vec3::{Point, Rgb, Vec3};
 
 fn main() -> io::Result<()> {
     // Image
 
     let aspect_ratio = 16.0 / 9.0;
-    let image_width = 1920;
+    let image_width = 400;
     let image_width_f = f64::from(image_width);
     let image_height_f = f64::from(image_width) / aspect_ratio;
     #[allow(clippy::cast_possible_truncation)]
     let image_height = image_height_f as i32;
+
+    // World
+
+    let mut world = HitList::default();
+    world.push(Rc::new(Sphere::new(Point::new(0.0, 0.0, -1.0), 0.5)));
+    world.push(Rc::new(Sphere::new(Point::new(0.0, -100.5, -1.0), 100.0)));
 
     // Camera
 
@@ -59,7 +68,7 @@ fn main() -> io::Result<()> {
                 origin,
                 lower_left_corner + u * horizontal + v * vertical - origin,
             );
-            let color = ray_color(&r);
+            let color = ray_color(&r, &world);
 
             color.write(&mut buf)?;
         }
@@ -72,11 +81,10 @@ fn main() -> io::Result<()> {
 }
 
 #[allow(clippy::shadow_unrelated)]
-fn ray_color(r: &Ray) -> Rgb {
-    let t = hit_sphere(Point::new(0.0, 0.0, -1.0), 0.5, r);
-    if t > 0.0 {
-        let n = (r.at(t) - Vec3::new(0.0, 0.0, -1.0)).unit();
-        return 0.5 * Rgb::new(n.x + 1.0, n.y + 1.0, n.z + 1.0);
+fn ray_color(r: &Ray, world: &HitList<Sphere>) -> Rgb {
+    let mut rec = HitRecord::default();
+    if world.hit(r, 0.0, f64::INFINITY, &mut rec) {
+        return 0.5 * (rec.normal + Rgb::new(1.0, 1.0, 1.0));
     }
 
     let unit_direction = r.direction.unit();
@@ -85,17 +93,17 @@ fn ray_color(r: &Ray) -> Rgb {
     Rgb::new(1.0, 1.0, 1.0).mul_add(1.0 - t, Rgb::new(0.5, 0.7, 1.0) * t)
 }
 
-fn hit_sphere(center: Point, radius: f64, r: &Ray) -> f64 {
-    let oc = r.origin - center;
-    // Quadratic equation.
-    let a = r.direction.len_squared();
-    let half_b = oc.dot(r.direction);
-    let c = radius.mul_add(-radius, oc.len_squared()); // oc.len_squared() - radius * radius
-    let discriminant = half_b.mul_add(half_b, -(a * c)); // half_b * half_b - a * c
+// fn hit_sphere(center: Point, radius: f64, r: &Ray) -> f64 {
+//     let oc = r.origin - center;
+//     // Quadratic equation.
+//     let a = r.direction.len_squared();
+//     let half_b = oc.dot(r.direction);
+//     let c = radius.mul_add(-radius, oc.len_squared()); // oc.len_squared() - radius * radius
+//     let discriminant = half_b.mul_add(half_b, -(a * c)); // half_b * half_b - a * c
 
-    if discriminant < 0.0 {
-        -1.0
-    } else {
-        (-half_b - discriminant.sqrt()) / a
-    }
-}
+//     if discriminant < 0.0 {
+//         -1.0
+//     } else {
+//         (-half_b - discriminant.sqrt()) / a
+//     }
+// }

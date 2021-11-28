@@ -12,3 +12,4 @@ categories = ["rendering", "rendering::engine", "multimedia"]
 
 [dependencies]
 indicatif = "0.17.0-beta.1"
+# parking_lot = "0.11.2"
