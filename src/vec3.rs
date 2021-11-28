@@ -38,7 +38,7 @@ impl Vec3 {
 
     #[inline]
     #[must_use]
-    fn len_squared(self) -> f64 {
+    pub fn len_squared(self) -> f64 {
         self.x
             .mul_add(self.x, self.y.mul_add(self.y, self.z * self.z))
     }

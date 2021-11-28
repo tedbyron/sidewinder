@@ -20,7 +20,7 @@ fn main() -> io::Result<()> {
     // Image
 
     let aspect_ratio = 16.0 / 9.0;
-    let image_width = 400;
+    let image_width = 1920;
     let image_width_f = f64::from(image_width);
     let image_height_f = f64::from(image_width) / aspect_ratio;
     #[allow(clippy::cast_possible_truncation)]
@@ -72,8 +72,6 @@ fn main() -> io::Result<()> {
 }
 
 #[allow(clippy::shadow_unrelated)]
-#[inline]
-#[must_use]
 fn ray_color(r: &Ray) -> Rgb {
     let t = hit_sphere(Point::new(0.0, 0.0, -1.0), 0.5, r);
     if t > 0.0 {
@@ -87,18 +85,17 @@ fn ray_color(r: &Ray) -> Rgb {
     Rgb::new(1.0, 1.0, 1.0).mul_add(1.0 - t, Rgb::new(0.5, 0.7, 1.0) * t)
 }
 
-#[inline]
-#[must_use]
 fn hit_sphere(center: Point, radius: f64, r: &Ray) -> f64 {
     let oc = r.origin - center;
-    let a = r.direction.dot(r.direction);
-    let b = 2.0 * oc.dot(r.direction);
-    let c = radius.mul_add(-radius, oc.dot(oc)); // oc.dot(oc) - radius * radius
-    let discriminant = b.mul_add(b, -4.0 * a * c); // b * b - 4.0 * a * c
+    // Quadratic equation.
+    let a = r.direction.len_squared();
+    let half_b = oc.dot(r.direction);
+    let c = radius.mul_add(-radius, oc.len_squared()); // oc.len_squared() - radius * radius
+    let discriminant = half_b.mul_add(half_b, -(a * c)); // half_b * half_b - a * c
 
     if discriminant < 0.0 {
         -1.0
     } else {
-        (-b - discriminant.sqrt()) / (2.0 * a)
+        (-half_b - discriminant.sqrt()) / a
     }
 }
