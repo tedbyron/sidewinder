@@ -2,6 +2,9 @@ use std::fmt;
 use std::io;
 use std::ops;
 
+use rand::distributions::{Distribution, Uniform};
+use rand::prelude::ThreadRng;
+
 #[non_exhaustive]
 #[derive(Debug, Default, Clone, Copy, PartialEq, PartialOrd)]
 pub struct Vec3 {
@@ -68,7 +71,7 @@ impl Vec3 {
         self / self.len()
     }
 
-    /// Write an RGB color represented by a [`Vec3`] into a buffer, using the input writer.
+    /// Write an [`Rgb`] color into a buffer, using the input writer.
     ///
     /// # Errors
     ///
@@ -78,12 +81,37 @@ impl Vec3 {
     pub fn write<W: io::Write>(self, writer: &mut W, samples: u32) -> io::Result<()> {
         let scale = f64::from(samples).recip();
 
-        let r = (256.0 * (self.x * scale).clamp(0.0, 0.999)) as i32;
-        let g = (256.0 * (self.y * scale).clamp(0.0, 0.999)) as i32;
-        let b = (256.0 * (self.z * scale).clamp(0.0, 0.999)) as i32;
+        let r = (256.0 * (self.x * scale).sqrt().clamp(0.0, 0.999)) as i32;
+        let g = (256.0 * (self.y * scale).sqrt().clamp(0.0, 0.999)) as i32;
+        let b = (256.0 * (self.z * scale).sqrt().clamp(0.0, 0.999)) as i32;
 
         writeln!(writer, "{} {} {}", r, g, b)?;
         Ok(())
+    }
+
+    #[inline]
+    #[must_use]
+    fn random<D: Distribution<f64>>(rng: &mut ThreadRng, dist: &D) -> Self {
+        Self {
+            x: dist.sample(rng),
+            y: dist.sample(rng),
+            z: dist.sample(rng),
+        }
+    }
+
+    #[inline]
+    #[must_use]
+    pub fn random_in_unit_sphere<D>(rng: &mut ThreadRng, dist: &D) -> Self
+    where
+        D: Distribution<f64>,
+    {
+        loop {
+            let p = Self::random(rng, dist);
+            if p.len_squared() >= 1.0 {
+                continue;
+            }
+            return p;
+        }
     }
 }
 

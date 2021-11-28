@@ -5,7 +5,7 @@
 
 ![Antialias](./img/7.2.png)
 
-<!-- ![Add multiple objects to the scene](./img/6.7.png) -->
+![Add multiple objects to the scene](./img/6.7.png)
 
 ![Add a surface normal to the sphere](./img/6.1.png)
 
