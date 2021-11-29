@@ -3,8 +3,13 @@
   <p><strong>Rust path tracer.</strong></p>
 </div>
 
+![Lambertian reflection](./img/8.5.png)
 
-![Diffuse materials](./img/8.2.ppm)
+![Fix shadow acne](./img/8.4.png)
+
+![Gamma correction](./img/8.3.png)
+
+![Diffuse materials](./img/8.2.png)
 
 ![Antialias](./img/7.2.png)
 

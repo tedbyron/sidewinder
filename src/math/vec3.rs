@@ -110,6 +110,12 @@ impl Vec3 {
             }
         }
     }
+
+    #[inline]
+    #[must_use]
+    pub fn random_unit_vector<D: Distribution<f64>>(rng: &mut ThreadRng, dist: &D) -> Self {
+        Self::random_in_unit_sphere(rng, dist).unit()
+    }
 }
 
 impl fmt::Display for Vec3 {

@@ -25,7 +25,7 @@ use sidewinder::util::Camera;
 fn main() -> io::Result<()> {
     let aspect_ratio = 16.0 / 9.0;
 
-    let image_width: u32 = 1920;
+    let image_width: u32 = 400;
     let image_width_f = f64::from(image_width);
 
     let image_height_f = if (image_width_f / aspect_ratio).fract() == 0.0 {
@@ -44,7 +44,7 @@ fn main() -> io::Result<()> {
     let image_height_f = image_height_f - 1.0;
 
     // Antialiasing samples.
-    let samples_per_pixel = 1000;
+    let samples_per_pixel = 100;
     // Diffuse reflection depth.
     let max_depth = 50;
 

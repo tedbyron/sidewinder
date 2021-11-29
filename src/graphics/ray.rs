@@ -42,7 +42,7 @@ impl Ray {
         }
 
         if world.hit(self, 0.001, f64::INFINITY, &mut rec) {
-            let target = rec.p + rec.normal + Vec3::random_in_unit_sphere(rng, dist);
+            let target = rec.p + rec.normal + Vec3::random_unit_vector(rng, dist);
             return 0.5 * Self::new(rec.p, target - rec.p).color(world, depth - 1, rng, dist);
         }
 
