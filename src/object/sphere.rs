@@ -1,6 +1,5 @@
-use crate::hit::{Hit, HitRecord};
-use crate::ray::Ray;
-use crate::vec3::Point;
+use crate::graphics::{Hit, HitRecord, Ray};
+use crate::math::Point;
 
 #[non_exhaustive]
 #[derive(Debug, Default, Clone, Copy, PartialEq, PartialOrd)]

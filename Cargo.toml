@@ -12,9 +12,6 @@ categories = ["rendering", "rendering::engine", "multimedia"]
 
 [dependencies]
 indicatif = "0.17.0-beta.1"
-# rayon = "1.5.1"
+rand = "0.8.4"
+rayon = "1.5.1"
 # parking_lot = "0.11.2"
-
-[dependencies.rand]
-version = "0.8.4"
-# features = ["simd_support"]

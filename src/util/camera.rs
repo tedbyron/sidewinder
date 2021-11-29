@@ -1,4 +1,5 @@
-use crate::{Point, Ray, Vec3};
+use crate::graphics::Ray;
+use crate::math::{Point, Vec3};
 
 #[non_exhaustive]
 #[derive(Debug, Default, Clone, Copy, PartialEq, PartialOrd)]
@@ -33,7 +34,7 @@ impl Camera {
 
     #[inline]
     #[must_use]
-    pub fn get_ray(&self, u: f64, v: f64) -> Ray {
+    pub fn ray(&self, u: f64, v: f64) -> Ray {
         Ray::new(
             self.origin,
             // self.lower_left_corner + (u * self.horizontal) + (v * self.vertical) - self.origin

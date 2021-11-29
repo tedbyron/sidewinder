@@ -6,106 +6,106 @@
     clippy::cargo,
     rust_2018_idioms
 )]
+#![windows_subsystem = "console"]
 #![doc = include_str!("../README.md")]
 
 use std::io::{self, Write as _};
-use std::rc::Rc;
 use std::time::Instant;
 
-use indicatif::{HumanDuration, ProgressIterator as _};
-use rand::Rng;
-
+use indicatif::{HumanDuration, ProgressBar};
 use rand::distributions::Uniform;
-use rand::prelude::{Distribution, ThreadRng};
-use sidewinder::{Camera, HitList, HitRecord, Point, Ray, Rgb, Sphere, Vec3};
+use rand::Rng;
+use rayon::iter::{IntoParallelIterator as _, ParallelIterator as _};
+
+use sidewinder::graphics::HitList;
+use sidewinder::math::{Point, Rgb};
+use sidewinder::object::Sphere;
+use sidewinder::util::Camera;
 
 fn main() -> io::Result<()> {
-    // Image
-
     let aspect_ratio = 16.0 / 9.0;
-    let image_width = 400;
+
+    let image_width: u32 = 1920;
     let image_width_f = f64::from(image_width);
-    let image_height_f = f64::from(image_width) / aspect_ratio;
-    #[allow(clippy::cast_possible_truncation)]
-    let image_height = image_height_f as i32;
-    let samples_per_pixel = 100;
+
+    let image_height_f = if (image_width_f / aspect_ratio).fract() == 0.0 {
+        image_width_f / aspect_ratio
+    } else {
+        panic!(
+            "image_width {} is not valid for aspect_ratio {}",
+            image_width, aspect_ratio
+        );
+    };
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+    let image_height = image_height_f as u32;
+
+    // Subtract one now so we don't need to in loops.
+    let image_width_f = image_width_f - 1.0;
+    let image_height_f = image_height_f - 1.0;
+
+    // Antialiasing samples.
+    let samples_per_pixel = 1000;
+    // Diffuse reflection depth.
     let max_depth = 50;
 
-    // World
-
-    let mut world = HitList::default();
-    world.push(Rc::new(Sphere::new(Point::new(0.0, 0.0, -1.0), 0.5)));
-    world.push(Rc::new(Sphere::new(Point::new(0.0, -100.5, -1.0), 100.0)));
-
-    // Camera
+    let world = sidewinder::hitlist![
+        Sphere::new(Point::new(0.0, 0.0, -1.0), 0.5),
+        Sphere::new(Point::new(0.0, -100.5, -1.0), 100.0),
+    ];
 
     let camera = Camera::new(aspect_ratio);
 
-    // Render
+    // Uniform distribution for unit types.
+    let dist_n11 = Uniform::from(-1.0..1.0);
+    // Progress bar for pixel calculation.
+    #[allow(clippy::cast_sign_loss)]
+    let bar = ProgressBar::new(u64::from(image_height)); // TODO: with_style(..)
 
+    // Measure elapsed time during render and writing.
     let timer = Instant::now();
 
-    let stdout = io::stdout();
-    let lock = stdout.lock();
-    let mut buf = io::BufWriter::new(lock); // TODO: calculate buffer capacity first?
-
-    writeln!(&mut buf, "P3\n{} {}\n255", image_width, image_height)?;
-
-    let mut rng = rand::thread_rng();
-    let dist_n11 = Uniform::from(-1.0..1.0);
-
-    let mut pixel_color;
-
-    // Write pixel information.
-    for j in (0..image_height).rev().progress() {
-        for i in 0..image_width {
-            pixel_color = Rgb::default();
-
-            for _ in 0..samples_per_pixel {
-                let u = (f64::from(i) + rng.gen::<f64>()) / (image_width_f - 1.0);
-                let v = (f64::from(j) + rng.gen::<f64>()) / (image_height_f - 1.0);
-
-                let r = camera.get_ray(u, v);
-                pixel_color += ray_color(&r, &world, max_depth, &mut rng, &dist_n11);
+    // Write pixel information to memory.
+    let pixels = (0..image_height * image_width)
+        .into_par_iter()
+        .map(|i| (i % image_width, image_height - i / image_width - 1))
+        .map(|(x, y)| {
+            if x == 0 {
+                bar.inc(1);
             }
 
-            pixel_color.write(&mut buf, samples_per_pixel)?;
-        }
+            let mut rng = rand::thread_rng();
+            let mut pixel = Rgb::default();
+
+            for _ in 0..samples_per_pixel {
+                let u = (f64::from(x) + rng.gen::<f64>()) / image_width_f;
+                let v = (f64::from(y) + rng.gen::<f64>()) / image_height_f;
+
+                let r = camera.ray(u, v);
+                pixel += r.color(&world, max_depth, &mut rng, &dist_n11);
+            }
+
+            pixel
+        })
+        .collect::<Vec<Rgb>>();
+
+    bar.finish_and_clear();
+    let bar = ProgressBar::new_spinner().with_message("Writing to stdout...");
+
+    // Lock stdout until done writing.
+    let stdout = io::stdout();
+    let lock = stdout.lock();
+    let mut buf = io::BufWriter::new(lock); // TODO: with_capacity(..)
+
+    // Write header information.
+    writeln!(&mut buf, "P3\n{} {}\n255", image_width, image_height)?;
+
+    // Write pixel information.
+    for pixel in pixels {
+        pixel.write(&mut buf, samples_per_pixel)?;
     }
 
     buf.flush()?;
-    eprintln!("PPM written in {}", HumanDuration(timer.elapsed()));
+    bar.finish_with_message(format!("Done in {}", HumanDuration(timer.elapsed())));
 
     Ok(())
-}
-
-#[allow(clippy::shadow_unrelated)]
-fn ray_color(
-    r: &Ray,
-    world: &HitList<Sphere>,
-    depth: usize,
-    rng: &mut ThreadRng,
-    dist: &impl Distribution<f64>,
-) -> Rgb {
-    let mut rec = HitRecord::default();
-    if depth == 0 {
-        return Rgb::default();
-    }
-
-    if world.hit(r, 0.0, f64::INFINITY, &mut rec) {
-        let target = rec.p + rec.normal + Vec3::random_in_unit_sphere(rng, dist);
-        return 0.5
-            * ray_color(
-                &Ray::new(rec.p, target - rec.p),
-                world,
-                depth - 1,
-                rng,
-                dist,
-            );
-    }
-
-    let unit_direction = r.direction.unit();
-    let t = 0.5 * (unit_direction.y + 1.0);
-    // (1.0 - t) * Rgb::new(1.0, 1.0, 1.0) + t * Rgb::new(0.5, 0.7, 1.0)
-    Rgb::new(1.0, 1.0, 1.0).mul_add(1.0 - t, Rgb::new(0.5, 0.7, 1.0) * t)
 }

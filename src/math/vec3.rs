@@ -23,12 +23,6 @@ impl Vec3 {
         Self { x, y, z }
     }
 
-    /// Fused multiply-add. Computes `(self * a) + b` with only one rounding error, yielding a more
-    /// accurate result than an unfused multiply-add.
-    ///
-    /// Using `mul_add` may be more performant than an unfused multiply-add if the target
-    /// architecture has a dedicated `fma` CPU instruction. However, this is not always true, and
-    /// will be heavily dependant on designing algorithms with specific target hardware in mind.
     #[inline]
     #[must_use]
     pub fn mul_add(self, a: f64, b: Self) -> Self {
@@ -75,15 +69,19 @@ impl Vec3 {
     ///
     /// # Errors
     ///
-    /// If there is an error writing to stdout.
-    #[allow(clippy::cast_possible_truncation)]
+    /// If there is an error writing the data.
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     #[inline]
     pub fn write<W: io::Write>(self, writer: &mut W, samples: u32) -> io::Result<()> {
         let scale = f64::from(samples).recip();
 
-        let r = (256.0 * (self.x * scale).sqrt().clamp(0.0, 0.999)) as i32;
-        let g = (256.0 * (self.y * scale).sqrt().clamp(0.0, 0.999)) as i32;
-        let b = (256.0 * (self.z * scale).sqrt().clamp(0.0, 0.999)) as i32;
+        let scaled_r = (self.x * scale).sqrt();
+        let scaled_g = (self.y * scale).sqrt();
+        let scaled_b = (self.z * scale).sqrt();
+
+        let r = (256.0 * scaled_r.clamp(0.0, 0.999)) as u8;
+        let g = (256.0 * scaled_g.clamp(0.0, 0.999)) as u8;
+        let b = (256.0 * scaled_b.clamp(0.0, 0.999)) as u8;
 
         writeln!(writer, "{} {} {}", r, g, b)?;
         Ok(())
@@ -107,10 +105,9 @@ impl Vec3 {
     {
         loop {
             let p = Self::random(rng, dist);
-            if p.len_squared() >= 1.0 {
-                continue;
+            if p.len_squared() < 1.0 {
+                return p;
             }
-            return p;
         }
     }
 }

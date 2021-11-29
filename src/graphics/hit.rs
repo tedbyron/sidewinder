@@ -1,9 +1,7 @@
 #![allow(clippy::module_name_repetitions)]
 
-use std::rc::Rc;
-
-use crate::ray::Ray;
-use crate::vec3::{Point, Vec3};
+use crate::graphics::Ray;
+use crate::math::{Point, Vec3};
 
 #[non_exhaustive]
 #[derive(Debug, Default, Clone, Copy, PartialEq, PartialOrd)]
@@ -47,28 +45,30 @@ impl HitRecord {
     }
 }
 
-pub trait Hit {
+pub trait Hit: Send + Sync {
     fn hit(&self, r: &Ray, t_min: f64, t_max: f64, rec: &mut HitRecord) -> bool;
 }
 
 #[non_exhaustive]
-#[derive(Debug, Default, Clone, PartialEq, PartialOrd)]
-pub struct HitList<T: Hit> {
-    inner: Vec<Rc<T>>,
+#[derive(Default)]
+pub struct HitList {
+    inner: Vec<Box<dyn Hit>>,
 }
 
-impl<T: Hit> HitList<T> {
+impl HitList {
     #[inline]
     pub fn clear(&mut self) {
         self.inner.clear();
     }
 
     #[inline]
-    pub fn push(&mut self, value: Rc<T>) {
+    pub fn push(&mut self, value: Box<dyn Hit>) {
         self.inner.push(value);
     }
+}
 
-    pub fn hit(&self, r: &Ray, t_min: f64, t_max: f64, rec: &mut HitRecord) -> bool {
+impl Hit for HitList {
+    fn hit(&self, r: &Ray, t_min: f64, t_max: f64, rec: &mut HitRecord) -> bool {
         let mut tmp = rec;
         let mut hit_anything = false;
         let mut closest_so_far = t_max;
@@ -82,4 +82,21 @@ impl<T: Hit> HitList<T> {
 
         hit_anything
     }
+}
+
+#[macro_export]
+macro_rules! hitlist {
+    () => {
+        Hitlist::default()
+    };
+    ($($x:expr,)*) => {
+        {
+            let mut tmp = HitList::default();
+            $(tmp.push(Box::new($x));)*
+            tmp
+        }
+    };
+    ($($x:expr),*) => {
+        sidewinder::hitlist![$($x,)*]
+    };
 }

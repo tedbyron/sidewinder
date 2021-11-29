@@ -3,6 +3,9 @@
   <p><strong>Rust path tracer.</strong></p>
 </div>
 
+
+![Diffuse materials](./img/8.2.ppm)
+
 ![Antialias](./img/7.2.png)
 
 ![Add multiple objects to the scene](./img/6.7.png)
