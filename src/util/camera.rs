@@ -2,7 +2,6 @@ use crate::graphics::Ray;
 use crate::math::{Point, Vec3};
 
 #[non_exhaustive]
-#[derive(Debug, Default, Clone, Copy, PartialEq, PartialOrd)]
 pub struct Camera {
     origin: Point,
     horizontal: Vec3,

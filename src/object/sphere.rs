@@ -1,23 +1,27 @@
-use crate::graphics::{Hit, HitRecord, Ray};
+use crate::graphics::{Hit, HitRecord, Material, Ray};
 use crate::math::Point;
 
 #[non_exhaustive]
-#[derive(Debug, Default, Clone, Copy, PartialEq, PartialOrd)]
 pub struct Sphere {
     center: Point,
     radius: f64,
+    mat: Box<dyn Material>,
 }
 
 impl Sphere {
     #[inline]
     #[must_use]
-    pub const fn new(center: Point, radius: f64) -> Self {
-        Self { center, radius }
+    pub fn new(center: Point, radius: f64, mat: Box<dyn Material>) -> Self {
+        Self {
+            center,
+            radius,
+            mat,
+        }
     }
 }
 
 impl Hit for Sphere {
-    fn hit(&self, r: &Ray, t_min: f64, t_max: f64, rec: &mut HitRecord) -> bool {
+    fn hit(&self, r: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord<'_>> {
         let oc = r.origin - self.center;
         // Quadratic equation.
         let a = r.direction.len_squared();
@@ -28,7 +32,7 @@ impl Hit for Sphere {
         let discriminant = half_b.mul_add(half_b, -(a * c));
 
         if discriminant < 0.0 {
-            return false;
+            return None;
         }
 
         let sqrt_d = discriminant.sqrt();
@@ -37,15 +41,14 @@ impl Hit for Sphere {
             root = (-half_b + sqrt_d) / a;
 
             if root < t_min || t_max < root {
-                return false;
+                return None;
             }
         }
 
-        rec.t = root;
-        rec.p = r.at(rec.t);
-        let outward_normal = (rec.p - self.center) / self.radius;
-        rec.set_face_normal(r, outward_normal);
+        let p = r.at(root);
+        let outward_normal = (p - self.center) / self.radius;
+        let (face, normal) = HitRecord::face_normal(r, outward_normal);
 
-        true
+        Some(HitRecord::new(p, normal, root, face, &*self.mat))
     }
 }

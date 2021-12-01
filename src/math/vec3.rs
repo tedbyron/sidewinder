@@ -1,12 +1,12 @@
-use std::fmt;
 use std::io;
 use std::ops;
 
-use rand::distributions::Distribution;
-use rand::prelude::ThreadRng;
+use rand::distributions::Distribution as _;
+
+use crate::util::RngDist;
 
 #[non_exhaustive]
-#[derive(Debug, Default, Clone, Copy, PartialEq, PartialOrd)]
+#[derive(Default, Clone, Copy, PartialEq, PartialOrd)]
 pub struct Vec3 {
     pub x: f64,
     pub y: f64,
@@ -65,6 +65,20 @@ impl Vec3 {
         self / self.len()
     }
 
+    #[inline]
+    #[must_use]
+    pub fn near_zero(self) -> bool {
+        let delta = 1.0e-8;
+        self.x < delta && self.y < delta && self.z < delta
+    }
+
+    #[inline]
+    #[must_use]
+    pub fn reflect(self, n: Self) -> Self {
+        // self - 2.0 * self.dot(n) * n
+        (self.dot(n) * n).mul_add(-2.0, self)
+    }
+
     /// Write an [`Rgb`] color into a buffer, using the input writer.
     ///
     /// # Errors
@@ -89,39 +103,40 @@ impl Vec3 {
 
     #[inline]
     #[must_use]
-    fn random<D: Distribution<f64>>(rng: &mut ThreadRng, dist: &D) -> Self {
+    fn random(rd: &mut RngDist<'_, '_>) -> Self {
         Self {
-            x: dist.sample(rng),
-            y: dist.sample(rng),
-            z: dist.sample(rng),
+            x: rd.dist.sample(rd.rng),
+            y: rd.dist.sample(rd.rng),
+            z: rd.dist.sample(rd.rng),
         }
     }
 
-    #[inline]
     #[must_use]
-    pub fn random_in_unit_sphere<D>(rng: &mut ThreadRng, dist: &D) -> Self
-    where
-        D: Distribution<f64>,
-    {
+    pub fn random_in_unit_sphere(rd: &mut RngDist<'_, '_>) -> Self {
         loop {
-            let p = Self::random(rng, dist);
+            let p = Self::random(rd);
             if p.len_squared() < 1.0 {
-                return p;
+                break p;
             }
         }
     }
 
     #[inline]
     #[must_use]
-    pub fn random_unit_vector<D: Distribution<f64>>(rng: &mut ThreadRng, dist: &D) -> Self {
-        Self::random_in_unit_sphere(rng, dist).unit()
+    pub fn random_unit_vector(rd: &mut RngDist<'_, '_>) -> Self {
+        Self::random_in_unit_sphere(rd).unit()
     }
-}
 
-impl fmt::Display for Vec3 {
     #[inline]
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} {} {}", self.x, self.y, self.z)
+    #[must_use]
+    pub fn random_in_hemisphere(normal: Self, rd: &mut RngDist<'_, '_>) -> Self {
+        let in_unit_sphere = Self::random_in_unit_sphere(rd);
+
+        if in_unit_sphere.dot(normal) > 0.0 {
+            in_unit_sphere
+        } else {
+            -in_unit_sphere
+        }
     }
 }
 
@@ -262,18 +277,5 @@ impl ops::DivAssign<f64> for Vec3 {
     #[inline]
     fn div_assign(&mut self, rhs: f64) {
         *self = *self / rhs;
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_mul_add() {
-        let base = Vec3::new(1.0, 2.0, 3.0);
-        let add = Vec3::new(3.0, 2.0, 1.0);
-
-        assert_eq!(base.mul_add(2.0, add), base * 2.0 + add);
     }
 }

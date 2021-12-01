@@ -3,50 +3,51 @@
 use crate::graphics::Ray;
 use crate::math::{Point, Vec3};
 
+use super::material::Material;
+
 #[non_exhaustive]
-#[derive(Debug, Default, Clone, Copy, PartialEq, PartialOrd)]
-pub struct HitRecord {
+#[derive(Clone, Copy)]
+pub struct HitRecord<'a> {
     pub p: Point,
     pub normal: Vec3,
     pub t: f64,
     pub face: Face,
+    pub mat: &'a dyn Material,
 }
 
 #[non_exhaustive]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy)]
 pub enum Face {
     Front,
     Back,
 }
 
-impl Default for Face {
+impl<'a> HitRecord<'a> {
     #[inline]
-    fn default() -> Self {
-        Self::Back
+    #[must_use]
+    pub fn new(p: Point, normal: Vec3, t: f64, face: Face, mat: &'a dyn Material) -> Self {
+        Self {
+            p,
+            normal,
+            t,
+            face,
+            mat,
+        }
     }
-}
-
-impl HitRecord {
-    // #[inline]
-    // #[must_use]
-    // pub const fn new(p: Point, normal: Vec3, t: f64, face: Face) -> Self {
-    //     Self { p, normal, t, face }
-    // }
 
     #[inline]
-    pub fn set_face_normal(&mut self, r: &Ray, outward_normal: Vec3) {
+    #[must_use]
+    pub fn face_normal(r: &Ray, outward_normal: Vec3) -> (Face, Vec3) {
         if r.direction.dot(outward_normal) < 0.0 {
-            self.face = Face::Front;
-            self.normal = outward_normal;
+            (Face::Front, outward_normal)
         } else {
-            self.face = Face::Back;
-            self.normal = -outward_normal;
-        };
+            (Face::Back, -outward_normal)
+        }
     }
 }
 
 pub trait Hit: Send + Sync {
-    fn hit(&self, r: &Ray, t_min: f64, t_max: f64, rec: &mut HitRecord) -> bool;
+    fn hit(&self, r: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord<'_>>;
 }
 
 #[non_exhaustive]
@@ -68,19 +69,21 @@ impl HitList {
 }
 
 impl Hit for HitList {
-    fn hit(&self, r: &Ray, t_min: f64, t_max: f64, rec: &mut HitRecord) -> bool {
-        let mut tmp = rec;
-        let mut hit_anything = false;
+    fn hit(&self, r: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord<'_>> {
+        let mut rec = None;
         let mut closest_so_far = t_max;
 
         for object in &self.inner {
-            if object.hit(r, t_min, closest_so_far, &mut tmp) {
-                hit_anything = true;
-                closest_so_far = tmp.t;
+            match object.hit(r, t_min, closest_so_far) {
+                Some(hit) => {
+                    closest_so_far = hit.t;
+                    rec = Some(hit);
+                }
+                None => continue,
             }
         }
 
-        hit_anything
+        rec
     }
 }
 

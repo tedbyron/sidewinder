@@ -1,13 +1,12 @@
-use rand::prelude::{Distribution, ThreadRng};
-
-use crate::graphics::{Hit as _, HitList, HitRecord};
+use crate::graphics::{Hit as _, HitList};
 use crate::math::{Point, Rgb, Vec3};
+use crate::util::RngDist;
 
 /// **P**(*t*) = **A** + *t***b** where **P** is a position along a 3D line, **A** is the ray
 /// origin, and **b** is the ray direction. Change *t*, the distance from the origin, to affect the
 /// color seen along the ray.
 #[non_exhaustive]
-#[derive(Debug, Default, Clone, Copy, PartialEq, PartialOrd)]
+#[derive(Clone, Copy)]
 pub struct Ray {
     pub origin: Point,
     pub direction: Vec3,
@@ -27,23 +26,19 @@ impl Ray {
         self.direction.mul_add(t, self.origin) // self.origin + t * self.direction
     }
 
-    #[inline]
     #[must_use]
-    pub fn color(
-        &self,
-        world: &HitList,
-        depth: usize,
-        rng: &mut ThreadRng,
-        dist: &impl Distribution<f64>,
-    ) -> Rgb {
-        let mut rec = HitRecord::default();
+    pub fn color(&self, world: &HitList, depth: usize, rd: &mut RngDist<'_, '_>) -> Rgb {
         if depth == 0 {
             return Rgb::default();
         }
 
-        if world.hit(self, 0.001, f64::INFINITY, &mut rec) {
-            let target = rec.p + rec.normal + Vec3::random_unit_vector(rng, dist);
-            return 0.5 * Self::new(rec.p, target - rec.p).color(world, depth - 1, rng, dist);
+        if let Some(rec) = world.hit(self, 0.001, f64::INFINITY) {
+            match rec.mat.scatter(self, &rec, rd) {
+                Some(scatter) => {
+                    return scatter.attenuation * scatter.ray.color(world, depth - 1, rd)
+                }
+                None => return Rgb::default(),
+            }
         }
 
         let unit_direction = self.direction.unit();

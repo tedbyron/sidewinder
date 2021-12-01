@@ -20,7 +20,7 @@ use rayon::iter::{IntoParallelIterator as _, ParallelIterator as _};
 use sidewinder::graphics::HitList;
 use sidewinder::math::{Point, Rgb};
 use sidewinder::object::Sphere;
-use sidewinder::util::Camera;
+use sidewinder::util::{Camera, RngDist};
 
 fn main() -> io::Result<()> {
     let aspect_ratio = 16.0 / 9.0;
@@ -81,7 +81,7 @@ fn main() -> io::Result<()> {
                 let v = (f64::from(y) + rng.gen::<f64>()) / image_height_f;
 
                 let r = camera.ray(u, v);
-                pixel += r.color(&world, max_depth, &mut rng, &dist_n11);
+                pixel += r.color(&world, max_depth, &mut RngDist::new(&mut rng, &dist_n11));
             }
 
             pixel
