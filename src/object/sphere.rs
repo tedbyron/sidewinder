@@ -2,16 +2,16 @@ use crate::graphics::{Hit, HitRecord, Material, Ray};
 use crate::math::Point;
 
 #[non_exhaustive]
-pub struct Sphere {
+pub struct Sphere<'a> {
     center: Point,
     radius: f64,
-    mat: Box<dyn Material>,
+    mat: &'a Box<dyn Material>,
 }
 
-impl Sphere {
+impl<'a> Sphere<'a> {
     #[inline]
     #[must_use]
-    pub fn new(center: Point, radius: f64, mat: Box<dyn Material>) -> Self {
+    pub fn new(center: Point, radius: f64, mat: &'a Box<dyn Material>) -> Self {
         Self {
             center,
             radius,
@@ -20,8 +20,8 @@ impl Sphere {
     }
 }
 
-impl Hit for Sphere {
-    fn hit(&self, r: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord<'_>> {
+impl<'a> Hit for Sphere<'a> {
+    fn hit(&self, r: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord<'a>> {
         let oc = r.origin - self.center;
         // Quadratic equation.
         let a = r.direction.len_squared();
@@ -49,6 +49,6 @@ impl Hit for Sphere {
         let outward_normal = (p - self.center) / self.radius;
         let (face, normal) = HitRecord::face_normal(r, outward_normal);
 
-        Some(HitRecord::new(p, normal, root, face, &*self.mat))
+        Some(HitRecord::new(p, normal, root, face, self.mat))
     }
 }

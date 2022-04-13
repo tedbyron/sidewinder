@@ -1,23 +1,22 @@
-#![forbid(unsafe_code)]
 #![warn(
     clippy::all,
-    clippy::pedantic,
-    clippy::nursery,
     clippy::cargo,
+    clippy::nursery,
+    clippy::pedantic,
     rust_2018_idioms
 )]
 #![windows_subsystem = "console"]
 #![doc = include_str!("../README.md")]
 
-use std::io::{self, Write as _};
+use std::io::{self, Write};
 use std::time::Instant;
 
 use indicatif::{HumanDuration, ProgressBar};
 use rand::distributions::Uniform;
 use rand::Rng;
-use rayon::iter::{IntoParallelIterator as _, ParallelIterator as _};
+use rayon::prelude::*;
 
-use sidewinder::graphics::HitList;
+use sidewinder::graphics::{HitList, Lambertian, Material, Metallic};
 use sidewinder::math::{Point, Rgb};
 use sidewinder::object::Sphere;
 use sidewinder::util::{Camera, RngDist};
@@ -48,9 +47,18 @@ fn main() -> io::Result<()> {
     // Diffuse reflection depth.
     let max_depth = 50;
 
+    let mats = sidewinder::matlist![
+        "ground": Lambertian::from(Rgb::new(0.8, 0.8, 0.0)),
+        "center": Lambertian::from(Rgb::new(0.7, 0.3, 0.3)),
+        "left": Metallic::from(Rgb::new(0.8, 0.8, 0.8)),
+        "right": Metallic::from(Rgb::new(0.8, 0.6, 0.2)),
+    ];
+
     let world = sidewinder::hitlist![
-        Sphere::new(Point::new(0.0, 0.0, -1.0), 0.5),
-        Sphere::new(Point::new(0.0, -100.5, -1.0), 100.0),
+        Sphere::new(Point::new(0.0, -100.5, -1.0), 100.0, &mats["ground"]),
+        Sphere::new(Point::new(0.0, 0.0, -1.0), 0.5, &mats["center"]),
+        Sphere::new(Point::new(-1.0, 0.0, -1.0), 0.5, &mats["left"]),
+        Sphere::new(Point::new(1.0, 0.0, -1.0), 0.5, &mats["right"]),
     ];
 
     let camera = Camera::new(aspect_ratio);

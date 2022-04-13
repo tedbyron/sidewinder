@@ -12,7 +12,7 @@ pub struct HitRecord<'a> {
     pub normal: Vec3,
     pub t: f64,
     pub face: Face,
-    pub mat: &'a dyn Material,
+    pub mat: &'a Box<dyn Material>,
 }
 
 #[non_exhaustive]
@@ -25,7 +25,7 @@ pub enum Face {
 impl<'a> HitRecord<'a> {
     #[inline]
     #[must_use]
-    pub fn new(p: Point, normal: Vec3, t: f64, face: Face, mat: &'a dyn Material) -> Self {
+    pub fn new(p: Point, normal: Vec3, t: f64, face: Face, mat: &'a Box<dyn Material>) -> Self {
         Self {
             p,
             normal,

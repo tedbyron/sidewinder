@@ -11,7 +11,7 @@ macro_rules! matlist {
     () => {
         std::collections::HashMap::<&str, Box<dyn Material>>::default()
     };
-    ($(($x:expr, $y:expr),)*) => {
+    ($($x:literal : $y:expr,)*) => {
         {
             let mut tmp: std::collections::HashMap<&str, Box<dyn Material>> =
                 std::collections::HashMap::default();
