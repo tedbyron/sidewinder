@@ -1,17 +1,20 @@
+use std::sync::Arc;
+
 use crate::graphics::{Hit, HitRecord, Material, Ray};
 use crate::math::Point;
 
+/// A sphere object. The `mat` field uses an `Arc` to avoid duplicating existing [`Material`]s.
 #[non_exhaustive]
 pub struct Sphere {
     center: Point,
     radius: f64,
-    mat: &'static dyn Material,
+    mat: Arc<dyn Material>,
 }
 
 impl Sphere {
     #[inline]
     #[must_use]
-    pub fn new(center: Point, radius: f64, mat: &'static dyn Material) -> Self {
+    pub fn new(center: Point, radius: f64, mat: Arc<dyn Material>) -> Self {
         Self {
             center,
             radius,
@@ -21,7 +24,7 @@ impl Sphere {
 }
 
 impl Hit for Sphere {
-    fn hit(&self, r: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord> {
+    fn hit(&self, r: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord<'_>> {
         let oc = r.origin - self.center;
         // Quadratic equation.
         let a = r.direction.len_squared();
@@ -49,6 +52,6 @@ impl Hit for Sphere {
         let outward_normal = (p - self.center) / self.radius;
         let (face, normal) = HitRecord::face_normal(r, outward_normal);
 
-        Some(HitRecord::new(p, normal, root, face, self.mat))
+        Some(HitRecord::new(p, normal, root, face, &*self.mat))
     }
 }

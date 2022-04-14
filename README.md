@@ -3,4 +3,4 @@
   <p><strong>CPU path tracer.</strong></p>
 </div>
 
-![Metal spheres](./img/9.5.png)
+![Fuzzy reflection](https://github.com/tedbyron/sidewinder/blob/main/img/9.6.png)

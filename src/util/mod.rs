@@ -1,3 +1,5 @@
+//! Utility types.
+
 mod camera;
 
 use rand::distributions::Uniform;

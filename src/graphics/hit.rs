@@ -5,16 +5,19 @@ use crate::math::{Point, Vec3};
 
 use super::material::Material;
 
+/// A record of a ray-object intersection. The `mat` field is a `&dyn Material` to avoid atomic
+/// operations in loops (e.g. cloning an `Arc<dyn Material>`).
 #[non_exhaustive]
-#[derive(Clone, Copy)]
-pub struct HitRecord {
+#[derive(Clone)]
+pub struct HitRecord<'a> {
     pub p: Point,
     pub normal: Vec3,
     pub t: f64,
     pub face: Face,
-    pub mat: &'static dyn Material,
+    pub mat: &'a dyn Material,
 }
 
+/// The front or back of an object's surface.
 #[non_exhaustive]
 #[derive(Clone, Copy)]
 pub enum Face {
@@ -22,10 +25,10 @@ pub enum Face {
     Back,
 }
 
-impl HitRecord {
+impl<'a> HitRecord<'a> {
     #[inline]
     #[must_use]
-    pub fn new(p: Point, normal: Vec3, t: f64, face: Face, mat: &'static dyn Material) -> Self {
+    pub fn new(p: Point, normal: Vec3, t: f64, face: Face, mat: &'a dyn Material) -> Self {
         Self {
             p,
             normal,
@@ -35,6 +38,8 @@ impl HitRecord {
         }
     }
 
+    /// Get a [`Face`] and outward normal such that the normal always points against the incident
+    /// [`Ray`].
     #[inline]
     #[must_use]
     pub fn face_normal(r: &Ray, outward_normal: Vec3) -> (Face, Vec3) {
@@ -46,34 +51,37 @@ impl HitRecord {
     }
 }
 
+/// Abstraction for objects whose surface may intersect a [`Ray`].
 pub trait Hit: Send + Sync {
-    fn hit(&self, r: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord>;
+    /// Check whether a [`Ray`] intersects `self`, and if it does, get a record of data about the
+    /// resulting intersection.
+    fn hit(&self, r: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord<'_>>;
 }
 
+/// Container of singly-owned objects that implement [`Hit`].
 #[non_exhaustive]
 #[derive(Default)]
-pub struct HitList {
-    inner: Vec<Box<dyn Hit>>,
-}
+pub struct HitList(Vec<Box<dyn Hit>>);
 
 impl HitList {
     #[inline]
     pub fn clear(&mut self) {
-        self.inner.clear();
+        self.0.clear();
     }
 
+    /// Appends a value to the list.
     #[inline]
     pub fn push(&mut self, value: Box<dyn Hit>) {
-        self.inner.push(value);
+        self.0.push(value);
     }
 }
 
 impl Hit for HitList {
-    fn hit(&self, r: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord> {
+    fn hit(&self, r: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord<'_>> {
         let mut rec = None;
         let mut closest_so_far = t_max;
 
-        for object in &self.inner {
+        for object in &self.0 {
             match object.hit(r, t_min, closest_so_far) {
                 Some(hit) => {
                     closest_so_far = hit.t;
@@ -96,7 +104,7 @@ macro_rules! hitlist {
     ( $($x:expr,)* $(,)? ) => {
         {
             let mut tmp = HitList::default();
-            $(tmp.push(Box::from($x));)*
+            $(tmp.push(Box::new($x));)*
             tmp
         }
     };
