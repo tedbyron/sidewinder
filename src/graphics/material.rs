@@ -1,27 +1,27 @@
+use std::collections::HashMap;
+
 use crate::graphics::{HitRecord, Ray};
 use crate::math::{Rgb, Vec3};
 use crate::util::RngDist;
 
 pub trait Material: Send + Sync {
-    fn scatter(&self, r: &Ray, rec: &HitRecord<'_>, rd: &mut RngDist<'_, '_>) -> Option<Scatter>;
+    fn scatter(&self, r: &Ray, rec: &HitRecord, rd: &mut RngDist<'_, '_>) -> Option<Scatter>;
 }
+
+pub type MatList = HashMap<&'static str, Box<dyn Material>>;
 
 #[macro_export]
 macro_rules! matlist {
     () => {
         std::collections::HashMap::<&str, Box<dyn Material>>::default()
     };
-    ($($x:literal : $y:expr,)*) => {
-        {
-            let mut tmp: std::collections::HashMap<&str, Box<dyn Material>> =
-                std::collections::HashMap::default();
-            $(tmp.insert($x, Box::from($y));)*
-            tmp
-        }
-    };
-    ($(($x:expr, $y:expr)),*) => {
-        sidewinder::matlist![$(($x, $y),)*]
-    };
+
+    ( $($x:literal : $y:expr),* $(,)? ) => {{
+        let mut tmp: std::collections::HashMap<&str, Box<dyn Material>> =
+            std::collections::HashMap::default();
+        $(tmp.insert($x, Box::from($y));)*
+        tmp
+    }};
 }
 
 #[non_exhaustive]
@@ -55,7 +55,7 @@ impl From<Rgb> for Lambertian {
 
 impl Material for Lambertian {
     #[inline]
-    fn scatter(&self, _: &Ray, rec: &HitRecord<'_>, rd: &mut RngDist<'_, '_>) -> Option<Scatter> {
+    fn scatter(&self, _: &Ray, rec: &HitRecord, rd: &mut RngDist<'_, '_>) -> Option<Scatter> {
         let mut direction = rec.normal + Vec3::random_unit_vector(rd);
         if direction.near_zero() {
             direction = rec.normal;
@@ -81,7 +81,7 @@ impl From<Rgb> for Metallic {
 
 impl Material for Metallic {
     #[inline]
-    fn scatter(&self, r: &Ray, rec: &HitRecord<'_>, _: &mut RngDist<'_, '_>) -> Option<Scatter> {
+    fn scatter(&self, r: &Ray, rec: &HitRecord, _: &mut RngDist<'_, '_>) -> Option<Scatter> {
         let reflected = r.direction.unit().reflect(rec.normal);
         Some(Scatter::new(Ray::new(rec.p, reflected), self.albedo))
     }

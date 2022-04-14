@@ -8,10 +8,18 @@ repository = "https://github.com/tedbyron/sidewinder"
 license = "MIT OR Apache-2.0"
 readme = "README.md"
 keywords = ["graphics", "3d", "ray-tracing", "path-tracing", "rendering"]
-categories = ["rendering", "rendering::engine", "multimedia"]
 
 [dependencies]
-indicatif = "0.17.0-beta.1"
-rand = "0.8.4"
-rayon = "1.5.1"
+indicatif = "0.17.0-rc.10"
+once_cell = { version = "1.10.0", features = ["parking_lot"] }
+rand = "0.8.5"
+rayon = "1.5.2"
+
 # parking_lot = "0.11.2"
+
+[profile.release]
+codegen-units = 1
+opt-level = 3
+lto = true
+panic = "abort"
+strip = "symbols"

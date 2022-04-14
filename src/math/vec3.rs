@@ -97,8 +97,7 @@ impl Vec3 {
         let g = (256.0 * scaled_g.clamp(0.0, 0.999)) as u8;
         let b = (256.0 * scaled_b.clamp(0.0, 0.999)) as u8;
 
-        writeln!(writer, "{} {} {}", r, g, b)?;
-        Ok(())
+        writeln!(writer, "{} {} {}", r, g, b)
     }
 
     #[inline]

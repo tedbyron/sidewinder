@@ -7,12 +7,12 @@ use super::material::Material;
 
 #[non_exhaustive]
 #[derive(Clone, Copy)]
-pub struct HitRecord<'a> {
+pub struct HitRecord {
     pub p: Point,
     pub normal: Vec3,
     pub t: f64,
     pub face: Face,
-    pub mat: &'a Box<dyn Material>,
+    pub mat: &'static dyn Material,
 }
 
 #[non_exhaustive]
@@ -22,10 +22,10 @@ pub enum Face {
     Back,
 }
 
-impl<'a> HitRecord<'a> {
+impl HitRecord {
     #[inline]
     #[must_use]
-    pub fn new(p: Point, normal: Vec3, t: f64, face: Face, mat: &'a Box<dyn Material>) -> Self {
+    pub fn new(p: Point, normal: Vec3, t: f64, face: Face, mat: &'static dyn Material) -> Self {
         Self {
             p,
             normal,
@@ -47,7 +47,7 @@ impl<'a> HitRecord<'a> {
 }
 
 pub trait Hit: Send + Sync {
-    fn hit(&self, r: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord<'_>>;
+    fn hit(&self, r: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord>;
 }
 
 #[non_exhaustive]
@@ -69,7 +69,7 @@ impl HitList {
 }
 
 impl Hit for HitList {
-    fn hit(&self, r: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord<'_>> {
+    fn hit(&self, r: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord> {
         let mut rec = None;
         let mut closest_so_far = t_max;
 
@@ -92,14 +92,12 @@ macro_rules! hitlist {
     () => {
         Hitlist::default()
     };
-    ($($x:expr,)*) => {
+
+    ( $($x:expr,)* $(,)? ) => {
         {
             let mut tmp = HitList::default();
-            $(tmp.push(Box::new($x));)*
+            $(tmp.push(Box::from($x));)*
             tmp
         }
-    };
-    ($($x:expr),*) => {
-        sidewinder::hitlist![$($x,)*]
     };
 }
