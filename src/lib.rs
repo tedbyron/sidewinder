@@ -1,8 +1,8 @@
 #![warn(
     clippy::all,
-    clippy::pedantic,
-    clippy::nursery,
     clippy::cargo,
+    clippy::nursery,
+    clippy::pedantic,
     rust_2018_idioms
 )]
 #![doc = include_str!("../README.md")]

@@ -33,11 +33,11 @@ struct Args {
     #[clap(short = 'r', long, default_value_t = 16.0 / 9.0)]
     aspect_ratio: f64,
 
-    /// Antialiasing Samples.
+    /// Antialiasing samples per pixel.
     #[clap(short, long = "samples", default_value_t = 100)]
     samples_per_pixel: u32,
 
-    /// Diffuse reflection depth.
+    /// Diffuse reflection recursion depth.
     #[clap(short = 'd', long = "depth", default_value_t = 50)]
     max_depth: usize,
 
@@ -79,7 +79,7 @@ fn main() -> io::Result<()> {
 
     let mats = sidewinder::matlist![
         "ground": Lambertian::new(Rgb::new(0.8, 0.8, 0.0)),
-        "center": Dialectric::new(1.5),
+        "center": Lambertian::new(Rgb::new(0.1, 0.2, 0.5)),
         "left": Dialectric::new(1.5),
         "right": Metallic::new(Rgb::new(0.8, 0.6, 0.2), 1.0),
     ];
@@ -125,52 +125,32 @@ fn main() -> io::Result<()> {
     bar.finish_and_clear();
     let bar = ProgressBar::new_spinner().with_message("Writing to stdout...");
 
+    let write_output = |buf: &mut dyn Write| -> io::Result<()> {
+        // Header information.
+        writeln!(buf, "P3\n{image_width} {image_height}\n255")?;
+
+        // Pixel information.
+        for pixel in pixels {
+            pixel.write(buf, samples_per_pixel)?;
+        }
+
+        Ok(())
+    };
+
     // The `BufWriter` can have different types, so we must call `write_output` in each case.
     if let Some(ref path) = output_path {
         let file = OpenOptions::new().write(true).truncate(force).open(path)?;
         let mut buf = BufWriter::new(file);
-
-        write_output(
-            &mut buf,
-            pixels,
-            image_width,
-            image_height,
-            samples_per_pixel,
-        )?;
+        write_output(&mut buf)?;
     } else {
         let stdout = io::stdout();
         let lock = stdout.lock();
         let mut buf = BufWriter::new(lock);
-
-        write_output(
-            &mut buf,
-            pixels,
-            image_width,
-            image_height,
-            samples_per_pixel,
-        )?;
+        write_output(&mut buf)?;
     };
 
     let elapsed = HumanDuration(timer.elapsed());
     bar.finish_with_message(format!("Done in {elapsed}"));
-
-    Ok(())
-}
-
-fn write_output(
-    buf: &mut dyn Write,
-    pixels: Vec<Rgb>,
-    image_width: u32,
-    image_height: u32,
-    samples_per_pixel: u32,
-) -> io::Result<()> {
-    // Header information.
-    writeln!(buf, "P3\n{image_width} {image_height}\n255")?;
-
-    // Pixel information.
-    for pixel in pixels {
-        pixel.write(buf, samples_per_pixel)?;
-    }
 
     Ok(())
 }
