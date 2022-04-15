@@ -1,12 +1,15 @@
+use rand::distributions::Distribution;
+use rand::rngs::ThreadRng;
+
 use crate::graphics::{Face, HitRecord, Ray};
 use crate::math::{Rgb, Vec3};
-use crate::util::RngDist;
+use crate::rng::UNIFORM_0_1;
 
 /// Trait for object materials to define how they scatter [`Ray`]s.
 pub trait Material: Send + Sync {
     /// Calculate a scattered [`Ray`] and its resulting color attenuation from a ray-object
     /// intersection.
-    fn scatter(&self, r: &Ray, rec: &HitRecord<'_>, rd: &mut RngDist<'_, '_>) -> Option<Scatter>;
+    fn scatter(&self, r: &Ray, rec: &HitRecord<'_>, rng: &mut ThreadRng) -> Option<Scatter>;
 }
 
 /// Create a `HashMap` of `&str` and `Arc<dyn Material>` pairs.
@@ -24,10 +27,13 @@ macro_rules! matlist {
     }};
 }
 
+/// A scattered [`Ray`] and its color.
 #[non_exhaustive]
 #[derive(Clone, Copy)]
 pub struct Scatter {
+    /// The scattered ray.
     pub ray: Ray,
+    /// The color of the scattered ray.
     pub attenuation: Rgb,
 }
 
@@ -43,6 +49,7 @@ impl Scatter {
 #[non_exhaustive]
 #[derive(Clone, Copy)]
 pub struct Lambertian {
+    /// The color of the material.
     pub albedo: Rgb,
 }
 
@@ -56,8 +63,8 @@ impl Lambertian {
 
 impl Material for Lambertian {
     #[inline]
-    fn scatter(&self, _: &Ray, rec: &HitRecord<'_>, rd: &mut RngDist<'_, '_>) -> Option<Scatter> {
-        let mut direction = rec.normal + Vec3::random_unit_vec(rd);
+    fn scatter(&self, _: &Ray, rec: &HitRecord<'_>, rng: &mut ThreadRng) -> Option<Scatter> {
+        let mut direction = rec.normal + Vec3::random_unit_vec(rng);
 
         // Catch degenerate scatter direction.
         if direction.near_zero() {
@@ -91,11 +98,11 @@ impl Metallic {
 
 impl Material for Metallic {
     #[inline]
-    fn scatter(&self, r: &Ray, rec: &HitRecord<'_>, rd: &mut RngDist<'_, '_>) -> Option<Scatter> {
+    fn scatter(&self, r: &Ray, rec: &HitRecord<'_>, rng: &mut ThreadRng) -> Option<Scatter> {
         let reflected = r.direction.unit().reflect(rec.normal);
         let scattered = Ray::new(
             rec.p,
-            reflected + self.blur * Vec3::random_in_unit_sphere(rd),
+            reflected + self.blur * Vec3::random_in_unit_sphere(rng),
         );
         Some(Scatter::new(scattered, self.albedo))
     }
@@ -117,17 +124,31 @@ impl Dialectric {
     }
 }
 
+#[inline]
+#[must_use]
+fn reflectance(cos: f64, idx: f64) -> f64 {
+    let r = ((1.0 - idx) / (1.0 + idx)).powi(2);
+    // r + (1.0 - r) * (1.0 - cos).powi(5)
+    (1.0 - r).mul_add((1.0 - cos).powi(5), r)
+}
+
 impl Material for Dialectric {
     #[inline]
-    fn scatter(&self, r: &Ray, rec: &HitRecord<'_>, _: &mut RngDist<'_, '_>) -> Option<Scatter> {
+    fn scatter(&self, r: &Ray, rec: &HitRecord<'_>, rng: &mut ThreadRng) -> Option<Scatter> {
         let ratio = match rec.face {
             Face::Front => self.idx.recip(),
             Face::Back => self.idx,
         };
-
         let unit_direction = r.direction.unit();
-        let refracted = unit_direction.refract(rec.normal, ratio);
-        let scattered = Ray::new(rec.p, refracted);
+        let cos_theta = (-unit_direction).dot(rec.normal).min(1.0);
+        let sin_theta = cos_theta.mul_add(-cos_theta, 1.0).sqrt();
+        let direction =
+            if ratio * sin_theta > 1.0 || reflectance(cos_theta, ratio) > UNIFORM_0_1.sample(rng) {
+                unit_direction.reflect(rec.normal)
+            } else {
+                unit_direction.refract(rec.normal, ratio)
+            };
+        let scattered = Ray::new(rec.p, direction);
 
         Some(Scatter::new(scattered, Rgb::ONE))
     }

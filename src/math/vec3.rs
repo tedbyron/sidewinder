@@ -3,8 +3,9 @@ use std::io::Write;
 use std::ops;
 
 use rand::distributions::Distribution;
+use rand::rngs::ThreadRng;
 
-use crate::util::RngDist;
+use crate::rng::UNIFORM_N1_1;
 
 /// A vector in 3D Euclidean space (**R**³).
 #[non_exhaustive]
@@ -132,42 +133,52 @@ impl Vec3 {
         writeln!(buf, "{r} {g} {b}")
     }
 
-    /// A random vector with compenents sampled from the given [`RngDist`].
+    // /// A random vector.
+    // #[inline]
+    // #[must_use]
+    // fn random(rng: &mut ThreadRng) -> Self {
+    //     Self {
+    //         x: UNIFORM_0_1.sample(rng),
+    //         y: UNIFORM_0_1.sample(rng),
+    //         z: UNIFORM_0_1.sample(rng),
+    //     }
+    // }
+
+    /// A random vector with components generated from the given distribution.
     #[inline]
     #[must_use]
-    fn random(rd: &mut RngDist<'_, '_>) -> Self {
+    fn random_in(dist: impl Distribution<f64>, rng: &mut ThreadRng) -> Self {
         Self {
-            x: rd.dist.sample(rd.rng),
-            y: rd.dist.sample(rd.rng),
-            z: rd.dist.sample(rd.rng),
+            x: dist.sample(rng),
+            y: dist.sample(rng),
+            z: dist.sample(rng),
         }
     }
 
-    /// A random vector within a unit sphere, with components sampled from the given [`RngDist`].
+    /// A random vector within a unit sphere.
+    #[inline]
     #[must_use]
-    pub fn random_in_unit_sphere(rd: &mut RngDist<'_, '_>) -> Self {
+    pub fn random_in_unit_sphere(rng: &mut ThreadRng) -> Self {
         loop {
-            let p = Self::random(rd);
+            let p = Self::random_in(*UNIFORM_N1_1, rng);
             if p.len_squared() < 1.0 {
                 break p;
             }
         }
     }
 
-    /// The unit vector of a random vector within a unit sphere, with components sampled from the
-    /// given [`RngDist`].
+    /// The unit vector of a random vector within a unit sphere.
     #[inline]
     #[must_use]
-    pub fn random_unit_vec(rd: &mut RngDist<'_, '_>) -> Self {
-        Self::random_in_unit_sphere(rd).unit()
+    pub fn random_unit_vec(rng: &mut ThreadRng) -> Self {
+        Self::random_in_unit_sphere(rng).unit()
     }
 
-    /// A random vector within the same hemisphere as the given `normal`, with components sampled
-    /// from the given [`RngDist`].
+    /// A random vector within the same hemisphere as the given `normal`.
     #[inline]
     #[must_use]
-    pub fn random_in_hemisphere(normal: Self, rd: &mut RngDist<'_, '_>) -> Self {
-        let in_unit_sphere = Self::random_in_unit_sphere(rd);
+    pub fn random_in_hemisphere(normal: Self, rng: &mut ThreadRng) -> Self {
+        let in_unit_sphere = Self::random_in_unit_sphere(rng);
 
         if in_unit_sphere.dot(normal) > 0.0 {
             in_unit_sphere

@@ -13,14 +13,14 @@ use std::time::Instant;
 
 use clap::Parser;
 use indicatif::{HumanDuration, ProgressBar};
-use rand::distributions::Uniform;
-use rand::Rng;
+use rand::prelude::Distribution;
 use rayon::prelude::*;
 
 use sidewinder::graphics::{Dialectric, HitList, Lambertian, Material, Metallic};
 use sidewinder::math::{Point, Rgb};
 use sidewinder::object::Sphere;
-use sidewinder::util::{Camera, RngDist};
+use sidewinder::rng::UNIFORM_0_1;
+use sidewinder::util::Camera;
 
 #[derive(clap::Parser)]
 #[clap(author, version, about, long_about = None)]
@@ -81,18 +81,18 @@ fn main() -> io::Result<()> {
         "ground": Lambertian::new(Rgb::new(0.8, 0.8, 0.0)),
         "center": Lambertian::new(Rgb::new(0.1, 0.2, 0.5)),
         "left": Dialectric::new(1.5),
-        "right": Metallic::new(Rgb::new(0.8, 0.6, 0.2), 1.0),
+        "right": Metallic::new(Rgb::new(0.8, 0.6, 0.2), 0.0),
     ];
 
     let world = sidewinder::hitlist![
         Sphere::new(Point::new(0.0, -100.5, -1.0), 100.0, mats["ground"].clone()),
         Sphere::new(Point::new(0.0, 0.0, -1.0), 0.5, mats["center"].clone()),
         Sphere::new(Point::new(-1.0, 0.0, -1.0), 0.5, mats["left"].clone()),
+        Sphere::new(Point::new(-1.0, 0.0, -1.0), -0.4, mats["left"].clone()),
         Sphere::new(Point::new(1.0, 0.0, -1.0), 0.5, mats["right"].clone()),
     ];
 
     let camera = Camera::new(aspect_ratio);
-    let dist_n11 = Uniform::from(-1.0..1.0);
     let bar = ProgressBar::new(u64::from(image_height)); // TODO: with_style(..)
     let timer = Instant::now();
 
@@ -109,11 +109,11 @@ fn main() -> io::Result<()> {
             let mut pixel = Rgb::ZERO;
 
             for _ in 0..samples_per_pixel {
-                let u = (f64::from(x) + rng.gen::<f64>()) / (image_width_f - 1.0);
-                let v = (f64::from(y) + rng.gen::<f64>()) / (image_height_f - 1.0);
+                let u = (f64::from(x) + UNIFORM_0_1.sample(&mut rng)) / (image_width_f - 1.0);
+                let v = (f64::from(y) + UNIFORM_0_1.sample(&mut rng)) / (image_height_f - 1.0);
 
                 let r = camera.ray(u, v);
-                pixel += r.color(&world, max_depth, &mut RngDist::new(&mut rng, &dist_n11));
+                pixel += r.color(&world, max_depth, &mut rng);
             }
 
             pixel
