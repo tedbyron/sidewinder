@@ -19,7 +19,7 @@ pub struct HitRecord<'a> {
 
 /// The front or back of an object's surface.
 #[non_exhaustive]
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Face {
     Front,
     Back,

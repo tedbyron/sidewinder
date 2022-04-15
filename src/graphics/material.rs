@@ -1,4 +1,4 @@
-use crate::graphics::{HitRecord, Ray};
+use crate::graphics::{Face, HitRecord, Ray};
 use crate::math::{Rgb, Vec3};
 use crate::util::RngDist;
 
@@ -72,8 +72,10 @@ impl Material for Lambertian {
 #[non_exhaustive]
 #[derive(Clone, Copy)]
 pub struct Metallic {
+    /// The color of the material.
     pub albedo: Rgb,
-    pub perturbation: f64,
+    /// The roughness of the material.
+    pub blur: f64,
 }
 
 impl Metallic {
@@ -82,7 +84,7 @@ impl Metallic {
     pub fn new(albedo: Rgb, perturbation: f64) -> Self {
         Self {
             albedo,
-            perturbation: perturbation.min(1.0),
+            blur: perturbation.min(1.0),
         }
     }
 }
@@ -93,8 +95,40 @@ impl Material for Metallic {
         let reflected = r.direction.unit().reflect(rec.normal);
         let scattered = Ray::new(
             rec.p,
-            reflected + self.perturbation * Vec3::random_in_unit_sphere(rd),
+            reflected + self.blur * Vec3::random_in_unit_sphere(rd),
         );
         Some(Scatter::new(scattered, self.albedo))
+    }
+}
+
+/// [`Material`] with dialectric refraction.
+#[non_exhaustive]
+#[derive(Clone, Copy)]
+pub struct Dialectric {
+    /// The refractive index of the material.
+    pub idx: f64,
+}
+
+impl Dialectric {
+    #[inline]
+    #[must_use]
+    pub const fn new(idx: f64) -> Self {
+        Self { idx }
+    }
+}
+
+impl Material for Dialectric {
+    #[inline]
+    fn scatter(&self, r: &Ray, rec: &HitRecord<'_>, _: &mut RngDist<'_, '_>) -> Option<Scatter> {
+        let ratio = match rec.face {
+            Face::Front => self.idx.recip(),
+            Face::Back => self.idx,
+        };
+
+        let unit_direction = r.direction.unit();
+        let refracted = unit_direction.refract(rec.normal, ratio);
+        let scattered = Ray::new(rec.p, refracted);
+
+        Some(Scatter::new(scattered, Rgb::ONE))
     }
 }

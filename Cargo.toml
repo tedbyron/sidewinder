@@ -11,6 +11,7 @@ keywords = ["graphics", "3d", "ray-tracing", "path-tracing", "rendering"]
 categories = ["rendering"]
 
 [dependencies]
+clap = { version = "3.1.8", features = ["derive"] }
 indicatif = "0.17.0-rc.10"
 rand = "0.8.5"
 rayon = "1.5.2"

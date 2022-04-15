@@ -1,4 +1,5 @@
 use std::io;
+use std::io::Write;
 use std::ops;
 
 use rand::distributions::Distribution;
@@ -96,14 +97,27 @@ impl Vec3 {
         (self.dot(normal) * normal).mul_add(-2.0, self)
     }
 
-    /// Write an [`Rgb`] color into a buffer, using the input writer.
+    /// A new vector representing the refraction of `self` at `normal`, with the refractive index
+    /// `idx`
+    #[inline]
+    #[must_use]
+    pub fn refract(self, normal: Self, idx: f64) -> Self {
+        let cos_theta = (-self).dot(normal).min(1.0);
+        // idx * (self + cos_theta * normal)
+        let perpendicular = idx * normal.mul_add(cos_theta, self);
+        let parallel = -(1.0 - perpendicular.len_squared()).abs().sqrt() * normal;
+
+        perpendicular + parallel
+    }
+
+    /// Write an [`Rgb`] color into a buffer.
     ///
     /// # Errors
     ///
-    /// If there is an error writing the data.
+    /// If there is an error with the `writeln!` invocation.
     #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     #[inline]
-    pub fn write<W: io::Write>(self, writer: &mut W, samples: u32) -> io::Result<()> {
+    pub fn write(self, buf: &mut dyn Write, samples: u32) -> io::Result<()> {
         let scale = f64::from(samples).recip();
 
         // Gamma correction.
@@ -115,7 +129,7 @@ impl Vec3 {
         let g = (256.0 * scaled_g.clamp(0.0, 0.999)) as u8;
         let b = (256.0 * scaled_b.clamp(0.0, 0.999)) as u8;
 
-        writeln!(writer, "{} {} {}", r, g, b)
+        writeln!(buf, "{r} {g} {b}")
     }
 
     /// A random vector with compenents sampled from the given [`RngDist`].
