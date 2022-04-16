@@ -12,17 +12,17 @@ pub trait Material: Send + Sync {
     fn scatter(&self, r: &Ray, rec: &HitRecord<'_>, rng: &mut ThreadRng) -> Option<Scatter>;
 }
 
-/// Create a `HashMap` of `&str` and `Arc<dyn Material>` pairs.
+/// Create a `HashMap` of `String` and `Arc<dyn Material>` pairs.
 #[macro_export]
 macro_rules! matlist {
     () => {
-        std::collections::HashMap::<&str, std::sync::Arc<dyn Material>>::default()
+        std::collections::HashMap::<String, std::sync::Arc<dyn Material>>::default()
     };
 
     ( $($x:literal : $y:expr),* $(,)? ) => {{
-        let mut tmp: std::collections::HashMap<&str, std::sync::Arc<dyn Material>> =
+        let mut tmp: std::collections::HashMap<String, std::sync::Arc<dyn Material>> =
             std::collections::HashMap::default();
-        $(tmp.insert($x, std::sync::Arc::new($y));)*
+        $(tmp.insert($x.to_string(), std::sync::Arc::new($y));)*
         tmp
     }};
 }

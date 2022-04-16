@@ -101,7 +101,7 @@ macro_rules! hitlist {
         Hitlist::default()
     };
 
-    ( $($x:expr,)* $(,)? ) => {
+    ( $($x:expr),* $(,)? ) => {
         {
             let mut tmp = HitList::default();
             $(tmp.push(Box::new($x));)*

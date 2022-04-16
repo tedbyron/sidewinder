@@ -9,10 +9,12 @@
 
 use std::fs::OpenOptions;
 use std::io::{self, BufWriter, Write};
+use std::sync::Arc;
 use std::time::Instant;
 
 use clap::Parser;
 use indicatif::{HumanDuration, ProgressBar};
+use rand::distributions::Uniform;
 use rand::prelude::Distribution;
 use rayon::prelude::*;
 
@@ -50,6 +52,7 @@ struct Args {
     force: bool,
 }
 
+#[allow(clippy::too_many_lines)]
 fn main() -> io::Result<()> {
     let Args {
         image_width,
@@ -78,45 +81,71 @@ fn main() -> io::Result<()> {
     #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     let image_height = image_height_f as u32;
 
-    let mats = sidewinder::matlist![
-        "ground": Lambertian::new(Rgb::newf(0.8, 0.8, 0.0)),
-        "center": Lambertian::new(Rgb::newf(0.1, 0.2, 0.5)),
-        "left": Dielectric::new(1.5),
-        "right": Metallic::new(Rgb::newf(0.8, 0.6, 0.2), 0.0),
-        // "left": Lambertian::new(Rgb::newi(0, 0, 1)),
-        // "right": Lambertian::new(Rgb::newi(1, 0, 0)),
+    let mut mats = sidewinder::matlist![
+        "ground": Lambertian::new(Rgb::newf(0.5, 0.5, 0.5)),
+        "dielectric": Dielectric::new(1.5),
+        "lambertian": Lambertian::new(Rgb::newf(0.4, 0.2, 0.1)),
+        "metallic": Metallic::new(Rgb::newf(0.7, 0.6, 0.5), 0.0),
+    ];
+    let mut world = sidewinder::hitlist![
+        Sphere::new(Point::newi(0, -1000, 0), 1000.0, mats["ground"].clone()),
+        Sphere::new(Point::newi(0, 1, 0), 1.0, mats["dielectric"].clone()),
+        Sphere::new(Point::newi(-4, 1, 0), 1.0, mats["lambertian"].clone()),
+        Sphere::new(Point::newi(4, 1, 0), 1.0, mats["metallic"].clone()),
     ];
 
-    // let radius: f64 = (std::f64::consts::PI / 4.0).cos();
+    let mut rng = rand::thread_rng();
+    let uniform_0_p5 = Uniform::<f64>::from(0.0..0.5);
+    let uniform_p5_1 = Uniform::<f64>::from(0.5..1.0);
+    let offset = Point::newf(4.0, 0.2, 0.0);
 
-    let world = sidewinder::hitlist![
-        Sphere::new(
-            Point::newf(0.0, -100.5, -1.0),
-            100.0,
-            mats["ground"].clone()
-        ),
-        Sphere::new(Point::newi(0, 0, -1), 0.5, mats["center"].clone()),
-        Sphere::new(Point::newi(-1, 0, -1), 0.5, mats["left"].clone()),
-        Sphere::new(Point::newi(-1, 0, -1), -0.45, mats["left"].clone()),
-        Sphere::new(Point::newi(1, 0, -1), 0.5, mats["right"].clone()),
-        // Sphere::new(
-        //     Point::newf(-radius, 0.0, -1.0),
-        //     radius,
-        //     mats["left"].clone()
-        // ),
-        // Sphere::new(
-        //     Point::newf(radius, 0.0, -1.0),
-        //     radius,
-        //     mats["right"].clone()
-        // ),
-    ];
+    for a in -11..11 {
+        let a = f64::from(a);
 
-    let from = Point::newi(3, 3, 2);
-    let to = Point::newi(0, 0, -1);
+        for b in -11..11 {
+            let b = f64::from(b);
+
+            let choose_mat = UNIFORM_0_1.sample(&mut rng);
+            let center = Point::newf(
+                0.9_f64.mul_add(UNIFORM_0_1.sample(&mut rng), a),
+                0.2,
+                0.9_f64.mul_add(UNIFORM_0_1.sample(&mut rng), b),
+            );
+
+            if (center - offset).len() > 0.9 {
+                let mat = match choose_mat {
+                    n if n < 0.8 => {
+                        let albedo = Rgb::random(&mut rng) * Rgb::random(&mut rng);
+                        let name = format!("lambertian {}, {}, {}", albedo.x, albedo.y, albedo.z);
+                        let name_clone = name.clone();
+                        mats.entry(name)
+                            .or_insert_with(|| Arc::new(Lambertian::new(albedo)));
+                        name_clone
+                    }
+                    n if n < 0.95 => {
+                        let albedo = Rgb::random_in(&uniform_p5_1, &mut rng);
+                        let blur = uniform_0_p5.sample(&mut rng);
+                        let name =
+                            format!("metal {}, {}, {}, {}", albedo.x, albedo.y, albedo.z, blur);
+                        let name_clone = name.clone();
+                        mats.entry(name)
+                            .or_insert_with(|| Arc::new(Metallic::new(albedo, blur)));
+                        name_clone
+                    }
+                    _ => "dielectric".to_string(),
+                };
+
+                let sphere = Sphere::new(center, 0.2, mats[&mat].clone());
+                world.push(Box::new(sphere));
+            }
+        }
+    }
+
+    let from = Point::newi(13, 2, 3);
+    let to = Point::newi(0, 0, 0);
     let v_up = Vec3::newi(0, 1, 0);
-    let focus_dist = (from - to).len();
-    let aperture = 2.0;
-
+    let focus_dist = 10.0;
+    let aperture = 0.1;
     let camera = Camera::new(from, to, v_up, 20.0, aspect_ratio, aperture, focus_dist);
 
     let bar = ProgressBar::new(u64::from(image_height)); // TODO: with_style(..)

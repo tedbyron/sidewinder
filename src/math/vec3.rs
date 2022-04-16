@@ -5,7 +5,7 @@ use std::ops;
 use rand::distributions::Distribution;
 use rand::rngs::ThreadRng;
 
-use crate::rng::UNIFORM_N1_1;
+use crate::rng::{UNIFORM_0_1, UNIFORM_N1_1};
 
 /// A vector in 3D Euclidean space (**R**³).
 #[non_exhaustive]
@@ -139,21 +139,21 @@ impl Vec3 {
         writeln!(buf, "{r} {g} {b}")
     }
 
-    // /// A random vector.
-    // #[inline]
-    // #[must_use]
-    // fn random(rng: &mut ThreadRng) -> Self {
-    //     Self {
-    //         x: UNIFORM_0_1.sample(rng),
-    //         y: UNIFORM_0_1.sample(rng),
-    //         z: UNIFORM_0_1.sample(rng),
-    //     }
-    // }
+    /// A random vector.
+    #[inline]
+    #[must_use]
+    pub fn random(rng: &mut ThreadRng) -> Self {
+        Self {
+            x: UNIFORM_0_1.sample(rng),
+            y: UNIFORM_0_1.sample(rng),
+            z: UNIFORM_0_1.sample(rng),
+        }
+    }
 
     /// A random vector with components sampled from the given distribution.
     #[inline]
     #[must_use]
-    fn random_in(dist: &impl Distribution<f64>, rng: &mut ThreadRng) -> Self {
+    pub fn random_in(dist: &impl Distribution<f64>, rng: &mut ThreadRng) -> Self {
         Self {
             x: dist.sample(rng),
             y: dist.sample(rng),
