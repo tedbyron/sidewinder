@@ -1,4 +1,5 @@
-use rand::prelude::ThreadRng;
+use rand::distributions::{Distribution, Uniform};
+use rand::rngs::ThreadRng;
 
 use crate::graphics::Ray;
 use crate::math::{Point, Vec3};
@@ -11,11 +12,12 @@ pub struct Camera {
     vertical: Vec3,
     u: Vec3,
     v: Vec3,
-    w: Vec3,
     lens_radius: f64,
+    dist: Uniform<f64>,
 }
 
 impl Camera {
+    #[allow(clippy::too_many_arguments)]
     #[inline]
     #[must_use]
     pub fn new(
@@ -26,6 +28,8 @@ impl Camera {
         aspect_ratio: f64,
         aperture: f64,
         focus_dist: f64,
+        t_start: f64,
+        t_end: f64,
     ) -> Self {
         let theta = v_fov.to_radians();
         let h = (theta / 2.0).tan();
@@ -48,8 +52,8 @@ impl Camera {
             vertical,
             u,
             v,
-            w,
             lens_radius: aperture / 2.0,
+            dist: Uniform::from(t_start..t_end),
         }
     }
 
@@ -68,6 +72,7 @@ impl Camera {
                 self.vertical
                     .mul_add(t, self.lower_left_corner - self.origin - offset),
             ),
+            self.dist.sample(rng),
         )
     }
 }

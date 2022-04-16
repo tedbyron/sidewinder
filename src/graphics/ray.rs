@@ -11,13 +11,18 @@ use crate::math::{Point, Rgb, Vec3};
 pub struct Ray {
     pub origin: Point,
     pub direction: Vec3,
+    pub t: f64,
 }
 
 impl Ray {
     #[inline]
     #[must_use]
-    pub const fn new(origin: Point, direction: Vec3) -> Self {
-        Self { origin, direction }
+    pub const fn new(origin: Point, direction: Vec3, t: f64) -> Self {
+        Self {
+            origin,
+            direction,
+            t,
+        }
     }
 
     /// The location along the ray's path which is distance `t` from the ray's origin.
