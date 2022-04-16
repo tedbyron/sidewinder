@@ -41,8 +41,8 @@ impl Ray {
 
         if let Some(ref rec) = world.hit(self, 0.001, f64::INFINITY) {
             match rec.mat.scatter(self, rec, rng) {
-                Some(scatter) => {
-                    return scatter.attenuation * scatter.ray.color(world, depth - 1, rng)
+                Some(scattered) => {
+                    return scattered.attenuation * scattered.ray.color(world, depth - 1, rng)
                 }
                 None => return Rgb::ZERO,
             }
@@ -50,7 +50,7 @@ impl Ray {
 
         let unit_direction = self.direction.unit();
         let t = 0.5 * (unit_direction.y + 1.0);
-        // (1.0 - t) * Rgb::ONE + t * Rgb::new(0.5, 0.7, 1.0)
-        Rgb::ONE.mul_add(1.0 - t, Rgb::new(0.5, 0.7, 1.0) * t)
+        // (1.0 - t) * Rgb::ONE + t * Rgb::newf(0.5, 0.7, 1.0)
+        Rgb::ONE.mul_add(1.0 - t, t * Rgb::newf(0.5, 0.7, 1.0))
     }
 }

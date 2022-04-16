@@ -16,11 +16,11 @@ use indicatif::{HumanDuration, ProgressBar};
 use rand::prelude::Distribution;
 use rayon::prelude::*;
 
-use sidewinder::graphics::{Dialectric, HitList, Lambertian, Material, Metallic};
-use sidewinder::math::{Point, Rgb};
+use sidewinder::camera::Camera;
+use sidewinder::graphics::{Dielectric, HitList, Lambertian, Material, Metallic};
+use sidewinder::math::{Point, Rgb, Vec3};
 use sidewinder::object::Sphere;
 use sidewinder::rng::UNIFORM_0_1;
-use sidewinder::util::Camera;
 
 #[derive(clap::Parser)]
 #[clap(author, version, about, long_about = None)]
@@ -64,6 +64,7 @@ fn main() -> io::Result<()> {
         OpenOptions::new()
             .write(true)
             .create_new(!force)
+            .create(force)
             .open(path)?;
     }
 
@@ -78,21 +79,46 @@ fn main() -> io::Result<()> {
     let image_height = image_height_f as u32;
 
     let mats = sidewinder::matlist![
-        "ground": Lambertian::new(Rgb::new(0.8, 0.8, 0.0)),
-        "center": Lambertian::new(Rgb::new(0.1, 0.2, 0.5)),
-        "left": Dialectric::new(1.5),
-        "right": Metallic::new(Rgb::new(0.8, 0.6, 0.2), 0.0),
+        "ground": Lambertian::new(Rgb::newf(0.8, 0.8, 0.0)),
+        "center": Lambertian::new(Rgb::newf(0.1, 0.2, 0.5)),
+        "left": Dielectric::new(1.5),
+        "right": Metallic::new(Rgb::newf(0.8, 0.6, 0.2), 0.0),
+        // "left": Lambertian::new(Rgb::newi(0, 0, 1)),
+        // "right": Lambertian::new(Rgb::newi(1, 0, 0)),
     ];
+
+    // let radius: f64 = (std::f64::consts::PI / 4.0).cos();
 
     let world = sidewinder::hitlist![
-        Sphere::new(Point::new(0.0, -100.5, -1.0), 100.0, mats["ground"].clone()),
-        Sphere::new(Point::new(0.0, 0.0, -1.0), 0.5, mats["center"].clone()),
-        Sphere::new(Point::new(-1.0, 0.0, -1.0), 0.5, mats["left"].clone()),
-        Sphere::new(Point::new(-1.0, 0.0, -1.0), -0.4, mats["left"].clone()),
-        Sphere::new(Point::new(1.0, 0.0, -1.0), 0.5, mats["right"].clone()),
+        Sphere::new(
+            Point::newf(0.0, -100.5, -1.0),
+            100.0,
+            mats["ground"].clone()
+        ),
+        Sphere::new(Point::newi(0, 0, -1), 0.5, mats["center"].clone()),
+        Sphere::new(Point::newi(-1, 0, -1), 0.5, mats["left"].clone()),
+        Sphere::new(Point::newi(-1, 0, -1), -0.45, mats["left"].clone()),
+        Sphere::new(Point::newi(1, 0, -1), 0.5, mats["right"].clone()),
+        // Sphere::new(
+        //     Point::newf(-radius, 0.0, -1.0),
+        //     radius,
+        //     mats["left"].clone()
+        // ),
+        // Sphere::new(
+        //     Point::newf(radius, 0.0, -1.0),
+        //     radius,
+        //     mats["right"].clone()
+        // ),
     ];
 
-    let camera = Camera::new(aspect_ratio);
+    let from = Point::newi(3, 3, 2);
+    let to = Point::newi(0, 0, -1);
+    let v_up = Vec3::newi(0, 1, 0);
+    let focus_dist = (from - to).len();
+    let aperture = 2.0;
+
+    let camera = Camera::new(from, to, v_up, 20.0, aspect_ratio, aperture, focus_dist);
+
     let bar = ProgressBar::new(u64::from(image_height)); // TODO: with_style(..)
     let timer = Instant::now();
 
@@ -112,7 +138,7 @@ fn main() -> io::Result<()> {
                 let u = (f64::from(x) + UNIFORM_0_1.sample(&mut rng)) / (image_width_f - 1.0);
                 let v = (f64::from(y) + UNIFORM_0_1.sample(&mut rng)) / (image_height_f - 1.0);
 
-                let r = camera.ray(u, v);
+                let r = camera.ray(u, v, &mut rng);
                 pixel += r.color(&world, max_depth, &mut rng);
             }
 
@@ -137,7 +163,7 @@ fn main() -> io::Result<()> {
         Ok(())
     };
 
-    // The `BufWriter` can have different types, so we must call `write_output` in each case.
+    // The `BufWriter` can have different types, call `write_output` in each case.
     if let Some(ref path) = output_path {
         let file = OpenOptions::new().write(true).truncate(force).open(path)?;
         let mut buf = BufWriter::new(file);

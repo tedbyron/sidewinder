@@ -39,7 +39,7 @@ impl Hit for Sphere {
         }
 
         let sqrt_d = discriminant.sqrt();
-        let mut root = (-half_b - discriminant.sqrt()) / a;
+        let mut root = (-half_b - sqrt_d) / a;
         if root < t_min || t_max < root {
             root = (-half_b + sqrt_d) / a;
 

@@ -23,14 +23,20 @@ pub type Rgb = Vec3;
 
 impl Vec3 {
     /// A vector in which all components are equal to 0.0.
-    pub const ZERO: Self = Self::new(0.0, 0.0, 0.0);
+    pub const ZERO: Self = Self::newi(0, 0, 0);
     /// A vector in which all components are equal to 1.0.
-    pub const ONE: Self = Self::new(1.0, 1.0, 1.0);
+    pub const ONE: Self = Self::newi(1, 1, 1);
 
     #[inline]
     #[must_use]
-    pub const fn new(x: f64, y: f64, z: f64) -> Self {
+    pub const fn newf(x: f64, y: f64, z: f64) -> Self {
         Self { x, y, z }
+    }
+
+    #[inline]
+    #[must_use]
+    pub const fn newi(x: i32, y: i32, z: i32) -> Self {
+        Self::newf(x as f64, y as f64, z as f64)
     }
 
     /// Fused multiply-add of each vector component.
@@ -94,8 +100,8 @@ impl Vec3 {
     #[inline]
     #[must_use]
     pub fn reflect(self, normal: Self) -> Self {
-        // self - 2.0 * self.dot(n) * n
-        (self.dot(normal) * normal).mul_add(-2.0, self)
+        self - 2.0 * self.dot(normal) * normal
+        // (self.dot(normal) * normal).mul_add(-2.0, self)
     }
 
     /// A new vector representing the refraction of `self` at `normal`, with the refractive index
@@ -144,10 +150,10 @@ impl Vec3 {
     //     }
     // }
 
-    /// A random vector with components generated from the given distribution.
+    /// A random vector with components sampled from the given distribution.
     #[inline]
     #[must_use]
-    fn random_in(dist: impl Distribution<f64>, rng: &mut ThreadRng) -> Self {
+    fn random_in(dist: &impl Distribution<f64>, rng: &mut ThreadRng) -> Self {
         Self {
             x: dist.sample(rng),
             y: dist.sample(rng),
@@ -160,7 +166,19 @@ impl Vec3 {
     #[must_use]
     pub fn random_in_unit_sphere(rng: &mut ThreadRng) -> Self {
         loop {
-            let p = Self::random_in(*UNIFORM_N1_1, rng);
+            let p = Self::random_in(&*UNIFORM_N1_1, rng);
+            if p.len_squared() < 1.0 {
+                break p;
+            }
+        }
+    }
+
+    /// A random vector within a unit disc.
+    #[inline]
+    #[must_use]
+    pub fn random_in_unit_disc(rng: &mut ThreadRng) -> Self {
+        loop {
+            let p = Self::newf(UNIFORM_N1_1.sample(rng), UNIFORM_N1_1.sample(rng), 0.0);
             if p.len_squared() < 1.0 {
                 break p;
             }

@@ -71,7 +71,8 @@ impl Material for Lambertian {
             direction = rec.normal;
         }
 
-        Some(Scatter::new(Ray::new(rec.p, direction), self.albedo))
+        let scattered = Ray::new(rec.p, direction);
+        Some(Scatter::new(scattered, self.albedo))
     }
 }
 
@@ -88,10 +89,10 @@ pub struct Metallic {
 impl Metallic {
     #[inline]
     #[must_use]
-    pub fn new(albedo: Rgb, perturbation: f64) -> Self {
+    pub fn new(albedo: Rgb, blur: f64) -> Self {
         Self {
             albedo,
-            blur: perturbation.min(1.0),
+            blur: blur.min(1.0),
         }
     }
 }
@@ -104,35 +105,41 @@ impl Material for Metallic {
             rec.p,
             reflected + self.blur * Vec3::random_in_unit_sphere(rng),
         );
-        Some(Scatter::new(scattered, self.albedo))
+
+        if scattered.direction.dot(rec.normal) > 0.0 {
+            Some(Scatter::new(scattered, self.albedo))
+        } else {
+            None
+        }
     }
 }
 
-/// [`Material`] with dialectric refraction.
+/// [`Material`] with dielectric refraction.
 #[non_exhaustive]
 #[derive(Clone, Copy)]
-pub struct Dialectric {
+pub struct Dielectric {
     /// The refractive index of the material.
     pub idx: f64,
 }
 
-impl Dialectric {
+impl Dielectric {
     #[inline]
     #[must_use]
     pub const fn new(idx: f64) -> Self {
         Self { idx }
     }
+
+    #[inline]
+    #[must_use]
+    fn reflectance(cos: f64, idx: f64) -> f64 {
+        // Schlick's approximation for reflectance.
+        let r0 = ((1.0 - idx) / (1.0 + idx)).powi(2);
+        // r0 + (1.0 - r0) * (1.0 - cos).powi(5)
+        (1.0 - r0).mul_add((1.0 - cos).powi(5), r0)
+    }
 }
 
-#[inline]
-#[must_use]
-fn reflectance(cos: f64, idx: f64) -> f64 {
-    let r = ((1.0 - idx) / (1.0 + idx)).powi(2);
-    // r + (1.0 - r) * (1.0 - cos).powi(5)
-    (1.0 - r).mul_add((1.0 - cos).powi(5), r)
-}
-
-impl Material for Dialectric {
+impl Material for Dielectric {
     #[inline]
     fn scatter(&self, r: &Ray, rec: &HitRecord<'_>, rng: &mut ThreadRng) -> Option<Scatter> {
         let ratio = match rec.face {
@@ -142,12 +149,13 @@ impl Material for Dialectric {
         let unit_direction = r.direction.unit();
         let cos_theta = (-unit_direction).dot(rec.normal).min(1.0);
         let sin_theta = cos_theta.mul_add(-cos_theta, 1.0).sqrt();
-        let direction =
-            if ratio * sin_theta > 1.0 || reflectance(cos_theta, ratio) > UNIFORM_0_1.sample(rng) {
-                unit_direction.reflect(rec.normal)
-            } else {
-                unit_direction.refract(rec.normal, ratio)
-            };
+        let direction = if ratio * sin_theta > 1.0
+            || Self::reflectance(cos_theta, ratio) > UNIFORM_0_1.sample(rng)
+        {
+            unit_direction.reflect(rec.normal)
+        } else {
+            unit_direction.refract(rec.normal, ratio)
+        };
         let scattered = Ray::new(rec.p, direction);
 
         Some(Scatter::new(scattered, Rgb::ONE))

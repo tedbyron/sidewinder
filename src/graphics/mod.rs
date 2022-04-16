@@ -5,5 +5,5 @@ mod material;
 mod ray;
 
 pub use hit::{Face, Hit, HitList, HitRecord};
-pub use material::{Dialectric, Lambertian, Material, Metallic};
+pub use material::{Dielectric, Lambertian, Material, Metallic};
 pub use ray::Ray;
