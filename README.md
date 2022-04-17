@@ -5,7 +5,7 @@
 
 Based on [Ray Tracing in One Weekend](https://raytracing.github.io/books/RayTracingInOneWeekend.html).
 
-![The final render](https://github.com/tedbyron/sidewinder/blob/main/img/13.1.png)
+![The final render](https://github.com/tedbyron/sidewinder/blob/main/book1/13.1.png)
 
 # Usage
 
