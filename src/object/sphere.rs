@@ -1,6 +1,8 @@
+#![allow(clippy::module_name_repetitions)]
+
 use std::sync::Arc;
 
-use crate::graphics::{Hit, HitRecord, Material, Ray};
+use crate::graphics::{Aabb, Hit, HitRecord, Material, Ray};
 use crate::math::Point;
 
 /// A sphere object. The `mat` field uses an `Arc` to avoid duplicating existing [`Material`]s.
@@ -53,6 +55,15 @@ impl Hit for Sphere {
         let (face, normal) = HitRecord::face_normal(r, outward_normal);
 
         Some(HitRecord::new(p, normal, root, face, &*self.mat))
+    }
+
+    #[inline]
+    #[must_use]
+    fn bounding_box(&self, _: f64, _: f64) -> Option<Aabb> {
+        Some(Aabb::new(
+            self.center - Point::new_all(self.radius),
+            self.center + Point::new_all(self.radius),
+        ))
     }
 }
 
@@ -123,5 +134,20 @@ impl Hit for MovingSphere {
         let (face, normal) = HitRecord::face_normal(r, outward_normal);
 
         Some(HitRecord::new(p, normal, root, face, &*self.mat))
+    }
+
+    #[inline]
+    #[must_use]
+    fn bounding_box(&self, t_start: f64, t_end: f64) -> Option<Aabb> {
+        let box_start = Aabb::new(
+            self.center(t_start) - Point::new_all(self.radius),
+            self.center(t_start) + Point::new_all(self.radius),
+        );
+        let box_end = Aabb::new(
+            self.center(t_end) - Point::new_all(self.radius),
+            self.center(t_end) + Point::new_all(self.radius),
+        );
+
+        Some(box_start.surrounding_box(box_end))
     }
 }

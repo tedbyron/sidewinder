@@ -1,5 +1,5 @@
-use rand::distributions::{Distribution, Uniform};
-use rand::rngs::ThreadRng;
+use rand::distributions::Uniform;
+use rand::prelude::*;
 
 use crate::graphics::Ray;
 use crate::math::{Point, Vec3};

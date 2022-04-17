@@ -1,4 +1,4 @@
-use rand::rngs::ThreadRng;
+use rand::prelude::*;
 
 use crate::graphics::{Hit, HitList};
 use crate::math::{Point, Rgb, Vec3};

@@ -1,9 +1,8 @@
-use rand::distributions::Distribution;
-use rand::rngs::ThreadRng;
+use rand::prelude::*;
 
 use crate::graphics::{Face, HitRecord, Ray};
 use crate::math::{Rgb, Vec3};
-use crate::rng::UNIFORM_0_1;
+use crate::rng::CLOSED_OPEN_01;
 
 /// Trait for object materials to define how they scatter [`Ray`]s.
 pub trait Material: Send + Sync {
@@ -12,7 +11,7 @@ pub trait Material: Send + Sync {
     fn scatter(&self, r: &Ray, rec: &HitRecord<'_>, rng: &mut ThreadRng) -> Option<Scatter>;
 }
 
-/// Create a `HashMap` of `String` and `Arc<dyn Material>` pairs.
+/// Creates a `HashMap` of `String` and `Arc<dyn Material>` pairs.
 #[macro_export]
 macro_rules! matlist {
     () => {
@@ -151,7 +150,7 @@ impl Material for Dielectric {
         let cos_theta = (-unit_direction).dot(rec.normal).min(1.0);
         let sin_theta = cos_theta.mul_add(-cos_theta, 1.0).sqrt();
         let direction = if ratio * sin_theta > 1.0
-            || Self::reflectance(cos_theta, ratio) > UNIFORM_0_1.sample(rng)
+            || Self::reflectance(cos_theta, ratio) > CLOSED_OPEN_01.sample(rng)
         {
             unit_direction.reflect(rec.normal)
         } else {

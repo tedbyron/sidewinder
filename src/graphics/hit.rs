@@ -1,9 +1,25 @@
 #![allow(clippy::module_name_repetitions)]
 
-use crate::graphics::Ray;
+use crate::graphics::{Aabb, Material, Ray};
 use crate::math::{Point, Vec3};
 
-use super::material::Material;
+/// Abstraction for objects whose surface may intersect a [`Ray`].
+pub trait Hit: Send + Sync {
+    /// Check whether a [`Ray`] intersects `self`, and if it does, get a record of data about the
+    /// resulting intersection.
+    fn hit(&self, r: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord<'_>>;
+    fn bounding_box(&self, t_start: f64, t_end: f64) -> Option<Aabb>;
+}
+
+impl Hit for Box<dyn Hit> {
+    fn hit(&self, r: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord<'_>> {
+        (**self).hit(r, t_min, t_max)
+    }
+
+    fn bounding_box(&self, t_start: f64, t_end: f64) -> Option<Aabb> {
+        (**self).bounding_box(t_start, t_end)
+    }
+}
 
 /// A record of a ray-object intersection. The `mat` field is a `&dyn Material` to avoid atomic
 /// operations in loops (e.g. cloning an `Arc<dyn Material>`).
@@ -51,37 +67,15 @@ impl<'a> HitRecord<'a> {
     }
 }
 
-/// Abstraction for objects whose surface may intersect a [`Ray`].
-pub trait Hit: Send + Sync {
-    /// Check whether a [`Ray`] intersects `self`, and if it does, get a record of data about the
-    /// resulting intersection.
-    fn hit(&self, r: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord<'_>>;
-}
-
 /// Container of singly-owned objects that implement [`Hit`].
-#[non_exhaustive]
-#[derive(Default)]
-pub struct HitList(Vec<Box<dyn Hit>>);
-
-impl HitList {
-    #[inline]
-    pub fn clear(&mut self) {
-        self.0.clear();
-    }
-
-    /// Appends a value to the list.
-    #[inline]
-    pub fn push(&mut self, value: Box<dyn Hit>) {
-        self.0.push(value);
-    }
-}
+pub type HitList = Vec<Box<dyn Hit>>;
 
 impl Hit for HitList {
     fn hit(&self, r: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord<'_>> {
         let mut rec = None;
         let mut closest_so_far = t_max;
 
-        for object in &self.0 {
+        for object in self {
             match object.hit(r, t_min, closest_so_far) {
                 Some(hit) => {
                     closest_so_far = hit.t;
@@ -93,8 +87,30 @@ impl Hit for HitList {
 
         rec
     }
+
+    fn bounding_box(&self, t_start: f64, t_end: f64) -> Option<Aabb> {
+        let mut box_ = Aabb::new(Vec3::ZERO, Vec3::ZERO);
+        let mut first_box = true;
+
+        for object in self {
+            match object.bounding_box(t_start, t_end) {
+                Some(bounding_box) => {
+                    box_ = if first_box {
+                        bounding_box
+                    } else {
+                        box_.surrounding_box(bounding_box)
+                    };
+                    first_box = false;
+                }
+                None => return None,
+            }
+        }
+
+        Some(box_)
+    }
 }
 
+/// Creates a `Vec` of objects that implement [`Hit`].
 #[macro_export]
 macro_rules! hitlist {
     () => {

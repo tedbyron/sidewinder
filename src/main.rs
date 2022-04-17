@@ -22,7 +22,7 @@ use sidewinder::camera::Camera;
 use sidewinder::graphics::{Dielectric, HitList, Lambertian, Material, Metallic};
 use sidewinder::math::{Point, Rgb, Vec3};
 use sidewinder::object::{MovingSphere, Sphere};
-use sidewinder::rng::UNIFORM_0_1;
+use sidewinder::rng::CLOSED_OPEN_01;
 
 #[derive(clap::Parser)]
 #[clap(author, version, about, long_about = None)]
@@ -105,11 +105,11 @@ fn main() -> io::Result<()> {
         for b in -11..11 {
             let b = f64::from(b);
 
-            let choose_mat = UNIFORM_0_1.sample(&mut rng);
+            let choose_mat = CLOSED_OPEN_01.sample(&mut rng);
             let center = Point::newf(
-                0.9_f64.mul_add(UNIFORM_0_1.sample(&mut rng), a),
+                0.9_f64.mul_add(CLOSED_OPEN_01.sample(&mut rng), a),
                 0.2,
-                0.9_f64.mul_add(UNIFORM_0_1.sample(&mut rng), b),
+                0.9_f64.mul_add(CLOSED_OPEN_01.sample(&mut rng), b),
             );
 
             if (center - offset).len() > 0.9 {
@@ -191,8 +191,8 @@ fn main() -> io::Result<()> {
             let mut pixel = Rgb::ZERO;
 
             for _ in 0..samples_per_pixel {
-                let u = (f64::from(x) + UNIFORM_0_1.sample(&mut rng)) / (image_width_f - 1.0);
-                let v = (f64::from(y) + UNIFORM_0_1.sample(&mut rng)) / (image_height_f - 1.0);
+                let u = (f64::from(x) + CLOSED_OPEN_01.sample(&mut rng)) / (image_width_f - 1.0);
+                let v = (f64::from(y) + CLOSED_OPEN_01.sample(&mut rng)) / (image_height_f - 1.0);
 
                 let r = camera.ray(u, v, &mut rng);
                 pixel += r.color(&world, max_depth, &mut rng);

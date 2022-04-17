@@ -2,10 +2,10 @@ use std::io;
 use std::io::Write;
 use std::ops;
 
-use rand::distributions::Distribution;
-use rand::rngs::ThreadRng;
+use rand::prelude::*;
 
-use crate::rng::{UNIFORM_0_1, UNIFORM_N1_1};
+use crate::math::Axis;
+use crate::rng::{CLOSED_OPEN_01, CLOSED_OPEN_N11};
 
 /// A vector in 3D Euclidean space (**R**³).
 #[non_exhaustive]
@@ -37,6 +37,12 @@ impl Vec3 {
     #[must_use]
     pub const fn newi(x: i32, y: i32, z: i32) -> Self {
         Self::newf(x as f64, y as f64, z as f64)
+    }
+
+    #[inline]
+    #[must_use]
+    pub const fn new_all(n: f64) -> Self {
+        Self::newf(n, n, n)
     }
 
     /// Fused multiply-add of each vector component.
@@ -139,14 +145,14 @@ impl Vec3 {
         writeln!(buf, "{r} {g} {b}")
     }
 
-    /// A random vector.
+    /// A random vector with components sampled from the uniform range [0, 1).
     #[inline]
     #[must_use]
     pub fn random(rng: &mut ThreadRng) -> Self {
         Self {
-            x: UNIFORM_0_1.sample(rng),
-            y: UNIFORM_0_1.sample(rng),
-            z: UNIFORM_0_1.sample(rng),
+            x: CLOSED_OPEN_01.sample(rng),
+            y: CLOSED_OPEN_01.sample(rng),
+            z: CLOSED_OPEN_01.sample(rng),
         }
     }
 
@@ -166,7 +172,7 @@ impl Vec3 {
     #[must_use]
     pub fn random_in_unit_sphere(rng: &mut ThreadRng) -> Self {
         loop {
-            let p = Self::random_in(&*UNIFORM_N1_1, rng);
+            let p = Self::random_in(&*CLOSED_OPEN_N11, rng);
             if p.len_squared() < 1.0 {
                 break p;
             }
@@ -178,7 +184,11 @@ impl Vec3 {
     #[must_use]
     pub fn random_in_unit_disc(rng: &mut ThreadRng) -> Self {
         loop {
-            let p = Self::newf(UNIFORM_N1_1.sample(rng), UNIFORM_N1_1.sample(rng), 0.0);
+            let p = Self::newf(
+                CLOSED_OPEN_N11.sample(rng),
+                CLOSED_OPEN_N11.sample(rng),
+                0.0,
+            );
             if p.len_squared() < 1.0 {
                 break p;
             }
@@ -343,5 +353,18 @@ impl ops::DivAssign<f64> for Vec3 {
     #[inline]
     fn div_assign(&mut self, rhs: f64) {
         *self = *self / rhs;
+    }
+}
+
+impl ops::Index<Axis> for Vec3 {
+    type Output = f64;
+
+    #[inline]
+    fn index(&self, axis: Axis) -> &Self::Output {
+        match axis {
+            Axis::X => &self.x,
+            Axis::Y => &self.y,
+            Axis::Z => &self.z,
+        }
     }
 }
