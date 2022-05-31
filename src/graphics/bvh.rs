@@ -95,16 +95,19 @@ impl Hit for Bvh {
         match &self.node {
             Node::Branch { left, right } => {
                 let left = left.hit(r, t_min, t_max);
-                let right = right.hit(
-                    r,
-                    t_min,
-                    match left {
-                        Some(ref rec) => rec.t,
-                        None => t_max,
-                    },
-                );
 
-                left.or(right)
+                if left.is_some() {
+                    left
+                } else {
+                    right.hit(
+                        r,
+                        t_min,
+                        match left {
+                            Some(ref rec) => rec.t,
+                            None => t_max,
+                        },
+                    )
+                }
             }
             Node::Leaf(node) => node.hit(r, t_min, t_max),
         }

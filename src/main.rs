@@ -9,20 +9,18 @@
 
 use std::fs::OpenOptions;
 use std::io::{self, BufWriter, Write};
-use std::sync::Arc;
 use std::time::Instant;
 
 use clap::Parser;
 use indicatif::{HumanDuration, ProgressBar};
-use rand::distributions::Uniform;
 use rand::prelude::Distribution;
 use rayon::prelude::*;
-
 use sidewinder::camera::Camera;
-use sidewinder::graphics::{Checkered, Dielectric, HitList, Lambertian, Metallic, Solid};
 use sidewinder::math::{Point, Rgb, Vec3};
-use sidewinder::object::{MovingSphere, Sphere};
 use sidewinder::rng::CLOSED_OPEN_01;
+
+mod scene_1;
+mod scene_2;
 
 #[derive(clap::Parser)]
 #[clap(author, version, about, long_about = None)]
@@ -52,7 +50,6 @@ struct Args {
     force: bool,
 }
 
-#[allow(clippy::too_many_lines)]
 fn main() -> io::Result<()> {
     let Args {
         image_width,
@@ -63,7 +60,6 @@ fn main() -> io::Result<()> {
         force,
     } = Args::parse();
     if let Some(ref path) = output_path {
-        // Create the file if it doesn't exist, or exit with an error.
         OpenOptions::new()
             .write(true)
             .create_new(!force)
@@ -81,78 +77,7 @@ fn main() -> io::Result<()> {
     #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     let image_height = image_height_f as u32;
 
-    let textures = sidewinder::texlist![
-        "ground": Checkered::new(
-            Box::new(Solid::new(Rgb::newf(0.2, 0.3, 0.1))),
-            Box::new(Solid::new(Rgb::new_all(0.9))),
-        ),
-        "lambertian": Solid::new(Rgb::newf(0.4, 0.2, 0.1)),
-    ];
-    let mats = sidewinder::matlist![
-        "ground": Lambertian::new(textures["ground"].clone()),
-        "dielectric": Dielectric::new(1.5),
-        "lambertian": Lambertian::new(textures["lambertian"].clone()),
-        "metallic": Metallic::new(Rgb::newf(0.7, 0.6, 0.5), 0.0),
-    ];
-    let mut world = sidewinder::hitlist![
-        Sphere::new(Point::newi(0, -1000, 0), 1000.0, mats["ground"].clone()),
-        Sphere::new(Point::newi(0, 1, 0), 1.0, mats["dielectric"].clone()),
-        Sphere::new(Point::newi(-4, 1, 0), 1.0, mats["lambertian"].clone()),
-        Sphere::new(Point::newi(4, 1, 0), 1.0, mats["metallic"].clone()),
-    ];
-
-    let mut rng = rand::thread_rng();
-    let uniform_0_p5 = Uniform::<f64>::from(0.0..0.5);
-    let uniform_p5_1 = Uniform::<f64>::from(0.5..1.0);
-    let offset = Point::newf(4.0, 0.2, 0.0);
-
-    for a in -11..11 {
-        let a = f64::from(a);
-
-        for b in -11..11 {
-            let b = f64::from(b);
-
-            let choose_mat = CLOSED_OPEN_01.sample(&mut rng);
-            let center = Point::newf(
-                0.9_f64.mul_add(CLOSED_OPEN_01.sample(&mut rng), a),
-                0.2,
-                0.9_f64.mul_add(CLOSED_OPEN_01.sample(&mut rng), b),
-            );
-
-            if (center - offset).len() > 0.9 {
-                match choose_mat {
-                    n if n < 0.8 => {
-                        let albedo =
-                            Arc::new(Solid::new(Rgb::random(&mut rng) * Rgb::random(&mut rng)));
-                        let center_end =
-                            center + Vec3::newf(0.0, uniform_0_p5.sample(&mut rng), 0.0);
-                        let sphere = MovingSphere::new(
-                            center,
-                            center_end,
-                            0.0,
-                            1.0,
-                            0.2,
-                            Arc::new(Lambertian::new(albedo)),
-                        );
-
-                        world.push(Box::new(sphere));
-                    }
-                    n if n < 0.95 => {
-                        let albedo = Rgb::random_in(&uniform_p5_1, &mut rng);
-                        let blur = uniform_0_p5.sample(&mut rng);
-                        let sphere =
-                            Sphere::new(center, 0.2, Arc::new(Metallic::new(albedo, blur)));
-
-                        world.push(Box::new(sphere));
-                    }
-                    _ => {
-                        let sphere = Sphere::new(center, 0.2, mats["dielectric"].clone());
-                        world.push(Box::new(sphere));
-                    }
-                };
-            }
-        }
-    }
+    let world = scene_2::two_spheres();
 
     let from = Point::newi(13, 2, 3);
     let to = Point::newi(0, 0, 0);
@@ -171,10 +96,9 @@ fn main() -> io::Result<()> {
         1.0,
     );
 
-    let bar = ProgressBar::new(u64::from(image_height)); // TODO: with_style(..)
+    let bar = ProgressBar::new(u64::from(image_height));
     let timer = Instant::now();
 
-    // Write pixel information to memory.
     let pixels = (0..image_height * image_width)
         .into_par_iter()
         .map(|i| (i % image_width, image_height - i / image_width - 1))
@@ -204,10 +128,8 @@ fn main() -> io::Result<()> {
     let bar = ProgressBar::new_spinner().with_message("Writing to stdout...");
 
     let write_output = |buf: &mut dyn Write| -> io::Result<()> {
-        // Header information.
         writeln!(buf, "P3\n{image_width} {image_height}\n255")?;
 
-        // Pixel information.
         for pixel in pixels {
             pixel.write(buf, samples_per_pixel)?;
         }
@@ -215,7 +137,6 @@ fn main() -> io::Result<()> {
         Ok(())
     };
 
-    // The `BufWriter` can have different types, call `write_output` in each case.
     if let Some(ref path) = output_path {
         let file = OpenOptions::new().write(true).truncate(force).open(path)?;
         let mut buf = BufWriter::new(file);

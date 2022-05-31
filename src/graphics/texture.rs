@@ -61,6 +61,12 @@ impl Checkered {
     pub const fn new(even: Box<dyn Texture>, odd: Box<dyn Texture>) -> Self {
         Self { even, odd }
     }
+
+    #[inline]
+    #[must_use]
+    pub fn from_colors(even: Rgb, odd: Rgb) -> Self {
+        Self::new(Box::new(Solid::new(even)), Box::new(Solid::new(odd)))
+    }
 }
 
 impl Texture for Checkered {
