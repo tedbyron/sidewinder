@@ -19,7 +19,7 @@ use rand::prelude::Distribution;
 use rayon::prelude::*;
 
 use sidewinder::camera::Camera;
-use sidewinder::graphics::{Dielectric, HitList, Lambertian, Material, Metallic};
+use sidewinder::graphics::{Checkered, Dielectric, HitList, Lambertian, Metallic, Solid};
 use sidewinder::math::{Point, Rgb, Vec3};
 use sidewinder::object::{MovingSphere, Sphere};
 use sidewinder::rng::CLOSED_OPEN_01;
@@ -81,10 +81,17 @@ fn main() -> io::Result<()> {
     #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     let image_height = image_height_f as u32;
 
-    let mut mats = sidewinder::matlist![
-        "ground": Lambertian::new(Rgb::newf(0.5, 0.5, 0.5)),
+    let textures = sidewinder::texlist![
+        "ground": Checkered::new(
+            Box::new(Solid::new(Rgb::newf(0.2, 0.3, 0.1))),
+            Box::new(Solid::new(Rgb::new_all(0.9))),
+        ),
+        "lambertian": Solid::new(Rgb::newf(0.4, 0.2, 0.1)),
+    ];
+    let mats = sidewinder::matlist![
+        "ground": Lambertian::new(textures["ground"].clone()),
         "dielectric": Dielectric::new(1.5),
-        "lambertian": Lambertian::new(Rgb::newf(0.4, 0.2, 0.1)),
+        "lambertian": Lambertian::new(textures["lambertian"].clone()),
         "metallic": Metallic::new(Rgb::newf(0.7, 0.6, 0.5), 0.0),
     ];
     let mut world = sidewinder::hitlist![
@@ -115,13 +122,8 @@ fn main() -> io::Result<()> {
             if (center - offset).len() > 0.9 {
                 match choose_mat {
                     n if n < 0.8 => {
-                        let albedo = Rgb::random(&mut rng) * Rgb::random(&mut rng);
-                        let name = format!("lambertian {}, {}, {}", albedo.x, albedo.y, albedo.z);
-                        let name_clone = name.clone();
-
-                        mats.entry(name)
-                            .or_insert_with(|| Arc::new(Lambertian::new(albedo)));
-
+                        let albedo =
+                            Arc::new(Solid::new(Rgb::random(&mut rng) * Rgb::random(&mut rng)));
                         let center_end =
                             center + Vec3::newf(0.0, uniform_0_p5.sample(&mut rng), 0.0);
                         let sphere = MovingSphere::new(
@@ -130,23 +132,17 @@ fn main() -> io::Result<()> {
                             0.0,
                             1.0,
                             0.2,
-                            mats[&name_clone].clone(),
+                            Arc::new(Lambertian::new(albedo)),
                         );
+
                         world.push(Box::new(sphere));
                     }
                     n if n < 0.95 => {
                         let albedo = Rgb::random_in(&uniform_p5_1, &mut rng);
                         let blur = uniform_0_p5.sample(&mut rng);
-                        let name = format!(
-                            "metallic {}, {}, {}, {}",
-                            albedo.x, albedo.y, albedo.z, blur
-                        );
-                        let name_clone = name.clone();
+                        let sphere =
+                            Sphere::new(center, 0.2, Arc::new(Metallic::new(albedo, blur)));
 
-                        mats.entry(name)
-                            .or_insert_with(|| Arc::new(Metallic::new(albedo, blur)));
-
-                        let sphere = Sphere::new(center, 0.2, mats[&name_clone].clone());
                         world.push(Box::new(sphere));
                     }
                     _ => {

@@ -106,8 +106,8 @@ impl Vec3 {
     #[inline]
     #[must_use]
     pub fn reflect(self, normal: Self) -> Self {
-        self - 2.0 * self.dot(normal) * normal
-        // (self.dot(normal) * normal).mul_add(-2.0, self)
+        // self - 2.0 * self.dot(normal) * normal
+        (self.dot(normal) * normal).mul_add(-2.0, self)
     }
 
     /// A new vector representing the refraction of `self` at `normal`, with the refractive index
@@ -127,7 +127,7 @@ impl Vec3 {
     ///
     /// # Errors
     ///
-    /// If there is an error with the `writeln!` invocation.
+    /// If there is an error writing to the buffer.
     #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     #[inline]
     pub fn write(self, buf: &mut dyn Write, samples: u32) -> io::Result<()> {

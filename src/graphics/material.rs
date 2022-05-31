@@ -1,6 +1,8 @@
+use std::sync::Arc;
+
 use rand::prelude::*;
 
-use crate::graphics::{Face, HitRecord, Ray};
+use crate::graphics::{Face, HitRecord, Ray, Texture};
 use crate::math::{Rgb, Vec3};
 use crate::rng::CLOSED_OPEN_01;
 
@@ -11,17 +13,26 @@ pub trait Material: Send + Sync {
     fn scatter(&self, r: &Ray, rec: &HitRecord<'_>, rng: &mut ThreadRng) -> Option<Scatter>;
 }
 
-/// Creates a `HashMap` of `String` and `Arc<dyn Material>` pairs.
+/// Creates a `HashMap` with `String` keys and `Arc<dyn Material>` values.
 #[macro_export]
 macro_rules! matlist {
     () => {
-        std::collections::HashMap::<String, std::sync::Arc<dyn Material>>::default()
+        use std::collections::HashMap;
+        use std::sync::Arc;
+
+        use sidewinder::graphics::Material;
+
+        HashMap::<String, Arc<dyn Material>>::default()
     };
 
     ( $($x:literal : $y:expr),* $(,)? ) => {{
-        let mut tmp: std::collections::HashMap<String, std::sync::Arc<dyn Material>> =
-            std::collections::HashMap::default();
-        $(tmp.insert($x.to_string(), std::sync::Arc::new($y));)*
+        use std::collections::HashMap;
+        use std::sync::Arc;
+
+        use sidewinder::graphics::Material;
+
+        let mut tmp: HashMap<String, Arc<dyn Material>> = HashMap::default();
+        $(tmp.insert($x.to_string(), Arc::new($y));)*
         tmp
     }};
 }
@@ -46,16 +57,16 @@ impl Scatter {
 
 /// [`Material`] with Lambertian reflection.
 #[non_exhaustive]
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub struct Lambertian {
-    /// The color of the material.
-    pub albedo: Rgb,
+    /// The texture of the material.
+    pub albedo: Arc<dyn Texture>,
 }
 
 impl Lambertian {
     #[inline]
     #[must_use]
-    pub const fn new(albedo: Rgb) -> Self {
+    pub const fn new(albedo: Arc<dyn Texture>) -> Self {
         Self { albedo }
     }
 }
@@ -71,7 +82,10 @@ impl Material for Lambertian {
         }
 
         let scattered = Ray::new(rec.p, direction, r.t);
-        Some(Scatter::new(scattered, self.albedo))
+        Some(Scatter::new(
+            scattered,
+            self.albedo.value(rec.u, rec.v, &rec.p),
+        ))
     }
 }
 

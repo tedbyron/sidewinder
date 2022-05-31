@@ -1,11 +1,12 @@
 #![allow(clippy::module_name_repetitions)]
 
+use std::f64::consts::PI;
 use std::sync::Arc;
 
 use crate::graphics::{Aabb, Hit, HitRecord, Material, Ray};
 use crate::math::Point;
 
-/// A sphere object. The `mat` field uses an `Arc` to avoid duplicating existing [`Material`]s.
+/// A sphere object.
 #[non_exhaustive]
 pub struct Sphere {
     center: Point,
@@ -23,9 +24,19 @@ impl Sphere {
             mat,
         }
     }
+
+    #[inline]
+    #[must_use]
+    pub fn uv(p: &Point) -> (f64, f64) {
+        let theta = -p.y.acos();
+        let phi = (-p.z).atan2(p.x) + PI;
+
+        (phi / (2.0 * PI), theta / PI)
+    }
 }
 
 impl Hit for Sphere {
+    #[allow(clippy::many_single_char_names)]
     fn hit(&self, r: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord<'_>> {
         let oc = r.origin - self.center;
         // Quadratic equation.
@@ -53,8 +64,9 @@ impl Hit for Sphere {
         let p = r.at(root);
         let outward_normal = (p - self.center) / self.radius;
         let (face, normal) = HitRecord::face_normal(r, outward_normal);
+        let (u, v) = Self::uv(&outward_normal);
 
-        Some(HitRecord::new(p, normal, root, face, &*self.mat))
+        Some(HitRecord::new(p, normal, &*self.mat, root, u, v, face))
     }
 
     #[inline]
@@ -67,6 +79,7 @@ impl Hit for Sphere {
     }
 }
 
+/// A moving sphere object.
 #[non_exhaustive]
 pub struct MovingSphere {
     center_start: Point,
@@ -108,6 +121,7 @@ impl MovingSphere {
 }
 
 impl Hit for MovingSphere {
+    #[allow(clippy::many_single_char_names)]
     fn hit(&self, r: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord<'_>> {
         let oc = r.origin - self.center(r.t);
         let a = r.direction.len_squared();
@@ -131,9 +145,10 @@ impl Hit for MovingSphere {
 
         let p = r.at(root);
         let outward_normal = (p - self.center(r.t)) / self.radius;
+        let (u, v) = Sphere::uv(&outward_normal);
         let (face, normal) = HitRecord::face_normal(r, outward_normal);
 
-        Some(HitRecord::new(p, normal, root, face, &*self.mat))
+        Some(HitRecord::new(p, normal, &*self.mat, root, u, v, face))
     }
 
     #[inline]

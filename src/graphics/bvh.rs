@@ -5,7 +5,7 @@ use std::cmp::Ordering;
 use rand::distributions::Standard;
 use rand::prelude::*;
 
-use crate::graphics::{Aabb, Hit, HitRecord};
+use crate::graphics::{Aabb, Hit, HitRecord, Ray};
 use crate::math::Axis;
 
 /// A bounding volume hierarchy.
@@ -31,8 +31,6 @@ impl Bvh {
         t_end: f64,
         rng: &mut ThreadRng,
     ) -> Self {
-        let axis = Standard.sample(rng);
-
         match objects.len() {
             0 => panic!("No objects objects passed to BVH node"),
             1 => {
@@ -40,12 +38,14 @@ impl Bvh {
                 let aabb = obj
                     .bounding_box(t_start, t_end)
                     .expect("No bounding box in BVH node");
+
                 Self {
                     node: Node::Leaf(obj),
                     aabb,
                 }
             }
             _ => {
+                let axis = Standard.sample(rng);
                 objects.sort_unstable_by(|l, r| Self::box_cmp(l, r, axis));
                 let left = Box::new(Self::new(
                     objects.drain(..objects.len() / 2).collect(),
@@ -60,6 +60,7 @@ impl Bvh {
                 let box_right = right
                     .bounding_box(t_start, t_end)
                     .expect("No bounding box in BVH node");
+
                 Self {
                     node: Node::Branch { left, right },
                     aabb: Aabb::surrounding_box(box_left, box_right),
@@ -85,9 +86,8 @@ impl Bvh {
 }
 
 impl Hit for Bvh {
-    #[inline]
     #[must_use]
-    fn hit(&self, r: &super::Ray, t_min: f64, t_max: f64) -> Option<HitRecord<'_>> {
+    fn hit(&self, r: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord<'_>> {
         if !self.aabb.hit(r, t_min, t_max) {
             return None;
         }

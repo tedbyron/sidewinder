@@ -2,6 +2,7 @@ use std::mem;
 
 use strum::IntoEnumIterator;
 
+use crate::graphics::Ray;
 use crate::math::{Axis, Point};
 
 /// An axis-aligned bounding box.
@@ -20,7 +21,7 @@ impl Aabb {
     }
 
     #[must_use]
-    pub fn hit(self, r: &super::Ray, t_min: f64, t_max: f64) -> bool {
+    pub fn hit(self, r: &Ray, t_min: f64, t_max: f64) -> bool {
         for axis in Axis::iter() {
             let inv_d = r.direction[axis].recip();
 
@@ -42,7 +43,6 @@ impl Aabb {
         true
     }
 
-    #[inline]
     #[must_use]
     pub fn surrounding_box(self, other: Self) -> Self {
         let small = Point::newf(

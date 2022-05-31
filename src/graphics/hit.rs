@@ -28,9 +28,11 @@ impl Hit for Box<dyn Hit> {
 pub struct HitRecord<'a> {
     pub p: Point,
     pub normal: Vec3,
-    pub t: f64,
-    pub face: Face,
     pub mat: &'a dyn Material,
+    pub t: f64,
+    pub u: f64,
+    pub v: f64,
+    pub face: Face,
 }
 
 /// The front or back of an object's surface.
@@ -44,13 +46,23 @@ pub enum Face {
 impl<'a> HitRecord<'a> {
     #[inline]
     #[must_use]
-    pub fn new(p: Point, normal: Vec3, t: f64, face: Face, mat: &'a dyn Material) -> Self {
+    pub fn new(
+        p: Point,
+        normal: Vec3,
+        mat: &'a dyn Material,
+        t: f64,
+        u: f64,
+        v: f64,
+        face: Face,
+    ) -> Self {
         Self {
             p,
             normal,
-            t,
-            face,
             mat,
+            t,
+            u,
+            v,
+            face,
         }
     }
 
