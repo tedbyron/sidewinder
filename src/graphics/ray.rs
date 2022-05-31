@@ -7,7 +7,6 @@ use crate::math::{Point, Rgb, Vec3};
 /// origin, and **b** is the ray direction. Change *t*, the distance from the origin, to affect the
 /// color seen along the ray.
 #[non_exhaustive]
-#[derive(Clone, Copy)]
 pub struct Ray {
     pub origin: Point,
     pub direction: Vec3,
@@ -15,8 +14,6 @@ pub struct Ray {
 }
 
 impl Ray {
-    #[inline]
-    #[must_use]
     pub const fn new(origin: Point, direction: Vec3, t: f64) -> Self {
         Self {
             origin,
@@ -26,9 +23,7 @@ impl Ray {
     }
 
     /// The location along the ray's path which is distance `t` from the ray's origin.
-    #[inline]
-    #[must_use]
-    pub fn at(self, t: f64) -> Point {
+    pub fn at(&self, t: f64) -> Point {
         self.direction.mul_add(t, self.origin)
     }
 
@@ -37,7 +32,6 @@ impl Ray {
     // Better approximation of ideal Lambertian diffuse:
     // let target = rec.p + Vec3::random_in_hemisphere(rec.normal, rd);
     // return 0.5 * Self::new(rec.p, target - rec.p).color(world, depth - 1, rd);
-    #[must_use]
     pub fn color(&self, world: &HitList, depth: usize, rng: &mut ThreadRng) -> Rgb {
         // If the maximum diffuse reflection depth is reached, no more light is gathered.
         if depth == 0 {

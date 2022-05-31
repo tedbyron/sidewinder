@@ -6,7 +6,6 @@ use crate::graphics::Ray;
 use crate::math::{Axis, Point};
 
 /// An axis-aligned bounding box.
-#[non_exhaustive]
 #[derive(Clone, Copy)]
 pub struct Aabb {
     pub min: Point,
@@ -14,13 +13,10 @@ pub struct Aabb {
 }
 
 impl Aabb {
-    #[inline]
-    #[must_use]
     pub const fn new(min: Point, max: Point) -> Self {
         Self { min, max }
     }
 
-    #[must_use]
     pub fn hit(self, r: &Ray, t_min: f64, t_max: f64) -> bool {
         for axis in Axis::iter() {
             let inv_d = r.direction[axis].recip();
@@ -43,7 +39,6 @@ impl Aabb {
         true
     }
 
-    #[must_use]
     pub fn surrounding_box(self, other: Self) -> Self {
         let small = Point::newf(
             self.min.x.min(other.min.x),

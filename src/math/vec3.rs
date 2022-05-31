@@ -9,7 +9,7 @@ use crate::rng::{CLOSED_OPEN_01, CLOSED_OPEN_N11};
 
 /// A vector in 3D Euclidean space (**R**³).
 #[non_exhaustive]
-#[derive(Clone, Copy, PartialEq, PartialOrd)]
+#[derive(Clone, Copy)]
 pub struct Vec3 {
     pub x: f64,
     pub y: f64,
@@ -27,27 +27,19 @@ impl Vec3 {
     /// A vector in which all components are equal to 1.0.
     pub const ONE: Self = Self::newi(1, 1, 1);
 
-    #[inline]
-    #[must_use]
     pub const fn newf(x: f64, y: f64, z: f64) -> Self {
         Self { x, y, z }
     }
 
-    #[inline]
-    #[must_use]
     pub const fn newi(x: i32, y: i32, z: i32) -> Self {
         Self::newf(x as f64, y as f64, z as f64)
     }
 
-    #[inline]
-    #[must_use]
     pub const fn new_all(n: f64) -> Self {
         Self::newf(n, n, n)
     }
 
     /// Fused multiply-add of each vector component.
-    #[inline]
-    #[must_use]
     pub fn mul_add(self, a: f64, b: Self) -> Self {
         Self {
             x: self.x.mul_add(a, b.x),
@@ -57,28 +49,20 @@ impl Vec3 {
     }
 
     /// Vector length squared.
-    #[inline]
-    #[must_use]
     pub fn len_squared(self) -> f64 {
         self.x
             .mul_add(self.x, self.y.mul_add(self.y, self.z * self.z))
     }
     /// Vector length.
-    #[inline]
-    #[must_use]
     pub fn len(self) -> f64 {
         self.len_squared().sqrt()
     }
 
     /// Dot product.
-    #[inline]
-    #[must_use]
     pub fn dot(self, rhs: Self) -> f64 {
         self.x.mul_add(rhs.x, self.y.mul_add(rhs.y, self.z * rhs.z))
     }
     /// Cross product.
-    #[inline]
-    #[must_use]
     pub fn cross(self, rhs: Self) -> Self {
         Self {
             x: self.y.mul_add(rhs.z, -(self.z * rhs.y)),
@@ -87,24 +71,18 @@ impl Vec3 {
         }
     }
     /// The vector's unit vector.
-    #[inline]
-    #[must_use]
     pub fn unit(self) -> Self {
         self / self.len()
     }
 
     /// Whether the vector is near the origin, checking whether each of the components is less than
     /// an offset `DELTA` from zero.
-    #[inline]
-    #[must_use]
     pub fn near_zero(self) -> bool {
         const DELTA: f64 = 1.0e-8;
         self.x < DELTA && self.y < DELTA && self.z < DELTA
     }
 
     /// A new vector representing the reflection of `self` at `normal`.
-    #[inline]
-    #[must_use]
     pub fn reflect(self, normal: Self) -> Self {
         // self - 2.0 * self.dot(normal) * normal
         (self.dot(normal) * normal).mul_add(-2.0, self)
@@ -112,8 +90,6 @@ impl Vec3 {
 
     /// A new vector representing the refraction of `self` at `normal`, with the refractive index
     /// `idx`
-    #[inline]
-    #[must_use]
     pub fn refract(self, normal: Self, idx: f64) -> Self {
         let cos_theta = (-self).dot(normal).min(1.0);
         // idx * (self + cos_theta * normal)
@@ -128,8 +104,6 @@ impl Vec3 {
     /// # Errors
     ///
     /// If there is an error writing to the buffer.
-    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-    #[inline]
     pub fn write(self, buf: &mut dyn Write, samples: u32) -> io::Result<()> {
         let scale = f64::from(samples).recip();
 
@@ -146,8 +120,6 @@ impl Vec3 {
     }
 
     /// A random vector with components sampled from the uniform range [0, 1).
-    #[inline]
-    #[must_use]
     pub fn random(rng: &mut ThreadRng) -> Self {
         Self {
             x: CLOSED_OPEN_01.sample(rng),
@@ -157,8 +129,6 @@ impl Vec3 {
     }
 
     /// A random vector with components sampled from the given distribution.
-    #[inline]
-    #[must_use]
     pub fn random_in(dist: &impl Distribution<f64>, rng: &mut ThreadRng) -> Self {
         Self {
             x: dist.sample(rng),
@@ -168,8 +138,6 @@ impl Vec3 {
     }
 
     /// A random vector within a unit sphere.
-    #[inline]
-    #[must_use]
     pub fn random_in_unit_sphere(rng: &mut ThreadRng) -> Self {
         loop {
             let p = Self::random_in(&*CLOSED_OPEN_N11, rng);
@@ -180,8 +148,6 @@ impl Vec3 {
     }
 
     /// A random vector within a unit disc.
-    #[inline]
-    #[must_use]
     pub fn random_in_unit_disc(rng: &mut ThreadRng) -> Self {
         loop {
             let p = Self::newf(
@@ -196,15 +162,11 @@ impl Vec3 {
     }
 
     /// The unit vector of a random vector within a unit sphere.
-    #[inline]
-    #[must_use]
     pub fn random_unit_vec(rng: &mut ThreadRng) -> Self {
         Self::random_in_unit_sphere(rng).unit()
     }
 
     /// A random vector within the same hemisphere as the given `normal`.
-    #[inline]
-    #[must_use]
     pub fn random_in_hemisphere(normal: Self, rng: &mut ThreadRng) -> Self {
         let in_unit_sphere = Self::random_in_unit_sphere(rng);
 
@@ -219,8 +181,6 @@ impl Vec3 {
 impl ops::Neg for Vec3 {
     type Output = Self;
 
-    #[inline]
-    #[must_use]
     fn neg(self) -> Self {
         Self {
             x: -self.x,
@@ -233,8 +193,6 @@ impl ops::Neg for Vec3 {
 impl ops::Add for Vec3 {
     type Output = Self;
 
-    #[inline]
-    #[must_use]
     fn add(self, rhs: Self) -> Self {
         Self {
             x: self.x + rhs.x,
@@ -245,7 +203,6 @@ impl ops::Add for Vec3 {
 }
 
 impl ops::AddAssign for Vec3 {
-    #[inline]
     fn add_assign(&mut self, rhs: Self) {
         *self = *self + rhs;
     }
@@ -254,8 +211,6 @@ impl ops::AddAssign for Vec3 {
 impl ops::Sub for Vec3 {
     type Output = Self;
 
-    #[inline]
-    #[must_use]
     fn sub(self, rhs: Self) -> Self {
         Self {
             x: self.x - rhs.x,
@@ -266,7 +221,6 @@ impl ops::Sub for Vec3 {
 }
 
 impl ops::SubAssign for Vec3 {
-    #[inline]
     fn sub_assign(&mut self, rhs: Self) {
         *self = *self - rhs;
     }
@@ -275,8 +229,6 @@ impl ops::SubAssign for Vec3 {
 impl ops::Mul for Vec3 {
     type Output = Self;
 
-    #[inline]
-    #[must_use]
     fn mul(self, rhs: Self) -> Self {
         Self {
             x: self.x * rhs.x,
@@ -289,8 +241,6 @@ impl ops::Mul for Vec3 {
 impl ops::Mul<f64> for Vec3 {
     type Output = Self;
 
-    #[inline]
-    #[must_use]
     fn mul(self, rhs: f64) -> Self {
         Self {
             x: self.x * rhs,
@@ -303,8 +253,6 @@ impl ops::Mul<f64> for Vec3 {
 impl ops::Mul<Vec3> for f64 {
     type Output = Vec3;
 
-    #[inline]
-    #[must_use]
     fn mul(self, rhs: Vec3) -> Self::Output {
         Vec3 {
             x: self * rhs.x,
@@ -315,7 +263,6 @@ impl ops::Mul<Vec3> for f64 {
 }
 
 impl ops::MulAssign<f64> for Vec3 {
-    #[inline]
     fn mul_assign(&mut self, rhs: f64) {
         *self = *self * rhs;
     }
@@ -324,8 +271,6 @@ impl ops::MulAssign<f64> for Vec3 {
 impl ops::Div for Vec3 {
     type Output = Self;
 
-    #[inline]
-    #[must_use]
     fn div(self, rhs: Self) -> Self {
         Self {
             x: self.x / rhs.x,
@@ -338,8 +283,6 @@ impl ops::Div for Vec3 {
 impl ops::Div<f64> for Vec3 {
     type Output = Self;
 
-    #[inline]
-    #[must_use]
     fn div(self, rhs: f64) -> Self {
         Self {
             x: self.x / rhs,
@@ -350,7 +293,6 @@ impl ops::Div<f64> for Vec3 {
 }
 
 impl ops::DivAssign<f64> for Vec3 {
-    #[inline]
     fn div_assign(&mut self, rhs: f64) {
         *self = *self / rhs;
     }
@@ -359,7 +301,6 @@ impl ops::DivAssign<f64> for Vec3 {
 impl ops::Index<Axis> for Vec3 {
     type Output = f64;
 
-    #[inline]
     fn index(&self, axis: Axis) -> &Self::Output {
         match axis {
             Axis::X => &self.x,

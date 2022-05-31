@@ -1,10 +1,4 @@
-#![warn(
-    clippy::all,
-    clippy::cargo,
-    clippy::nursery,
-    clippy::pedantic,
-    rust_2018_idioms
-)]
+#![warn(clippy::all, clippy::cargo, clippy::nursery, rust_2018_idioms)]
 #![doc = include_str!("../README.md")]
 
 use std::fs::OpenOptions;
@@ -21,6 +15,7 @@ use sidewinder::rng::CLOSED_OPEN_01;
 
 mod scene_1;
 mod scene_2;
+mod scene_3;
 
 #[derive(clap::Parser)]
 #[clap(author, version, about, long_about = None)]
@@ -74,10 +69,9 @@ fn main() -> io::Result<()> {
     } else {
         panic!("Error: image_width {image_width} is not valid for aspect_ratio {aspect_ratio}");
     };
-    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     let image_height = image_height_f as u32;
 
-    let world = scene_2::two_spheres();
+    let world = scene_3::two_perlin_spheres();
 
     let from = Point::newi(13, 2, 3);
     let to = Point::newi(0, 0, 0);

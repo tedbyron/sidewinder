@@ -1,5 +1,3 @@
-#![allow(clippy::module_name_repetitions)]
-
 use std::cmp::Ordering;
 
 use rand::distributions::Standard;
@@ -24,7 +22,6 @@ impl Bvh {
     /// # Panics
     ///
     /// If a bounding box cannot be calculated.
-    #[must_use]
     pub fn new(
         mut objects: Vec<Box<dyn Hit>>,
         t_start: f64,
@@ -69,8 +66,6 @@ impl Bvh {
         }
     }
 
-    #[inline]
-    #[must_use]
     fn box_cmp(left: &dyn Hit, right: &dyn Hit, axis: Axis) -> Ordering {
         left.bounding_box(0.0, 0.0)
             .expect("No bounding box in BVH node")
@@ -86,7 +81,6 @@ impl Bvh {
 }
 
 impl Hit for Bvh {
-    #[must_use]
     fn hit(&self, r: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord<'_>> {
         if !self.aabb.hit(r, t_min, t_max) {
             return None;
@@ -113,7 +107,6 @@ impl Hit for Bvh {
         }
     }
 
-    #[inline]
     fn bounding_box(&self, _: f64, _: f64) -> Option<Aabb> {
         Some(self.aabb)
     }

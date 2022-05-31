@@ -18,8 +18,6 @@ pub struct Camera {
 
 impl Camera {
     #[allow(clippy::too_many_arguments)]
-    #[inline]
-    #[must_use]
     pub fn new(
         from: Point,
         to: Point,
@@ -57,8 +55,6 @@ impl Camera {
         }
     }
 
-    #[inline]
-    #[must_use]
     pub fn ray(&self, s: f64, t: f64, rng: &mut ThreadRng) -> Ray {
         let rd = self.lens_radius * Vec3::random_in_unit_disc(rng);
         let offset = self.u * rd.x + self.v * rd.y;

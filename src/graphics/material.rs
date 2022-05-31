@@ -39,7 +39,6 @@ macro_rules! matlist {
 
 /// A scattered [`Ray`] and its color.
 #[non_exhaustive]
-#[derive(Clone, Copy)]
 pub struct Scatter {
     /// The scattered ray.
     pub ray: Ray,
@@ -48,8 +47,6 @@ pub struct Scatter {
 }
 
 impl Scatter {
-    #[inline]
-    #[must_use]
     pub const fn new(ray: Ray, attenuation: Rgb) -> Self {
         Self { ray, attenuation }
     }
@@ -57,22 +54,18 @@ impl Scatter {
 
 /// [`Material`] with Lambertian reflection.
 #[non_exhaustive]
-#[derive(Clone)]
 pub struct Lambertian {
     /// The texture of the material.
     pub albedo: Arc<dyn Texture>,
 }
 
 impl Lambertian {
-    #[inline]
-    #[must_use]
     pub const fn new(albedo: Arc<dyn Texture>) -> Self {
         Self { albedo }
     }
 }
 
 impl Material for Lambertian {
-    #[inline]
     fn scatter(&self, r: &Ray, rec: &HitRecord<'_>, rng: &mut ThreadRng) -> Option<Scatter> {
         let mut direction = rec.normal + Vec3::random_unit_vec(rng);
 
@@ -91,7 +84,6 @@ impl Material for Lambertian {
 
 /// [`Material`] with metallic reflection.
 #[non_exhaustive]
-#[derive(Clone, Copy)]
 pub struct Metallic {
     /// The color of the material.
     pub albedo: Rgb,
@@ -100,8 +92,6 @@ pub struct Metallic {
 }
 
 impl Metallic {
-    #[inline]
-    #[must_use]
     pub fn new(albedo: Rgb, blur: f64) -> Self {
         Self {
             albedo,
@@ -111,7 +101,6 @@ impl Metallic {
 }
 
 impl Material for Metallic {
-    #[inline]
     fn scatter(&self, r: &Ray, rec: &HitRecord<'_>, rng: &mut ThreadRng) -> Option<Scatter> {
         let reflected = r.direction.unit().reflect(rec.normal);
         let scattered = Ray::new(
@@ -130,21 +119,16 @@ impl Material for Metallic {
 
 /// [`Material`] with dielectric refraction.
 #[non_exhaustive]
-#[derive(Clone, Copy)]
 pub struct Dielectric {
     /// The refractive index of the material.
     pub idx: f64,
 }
 
 impl Dielectric {
-    #[inline]
-    #[must_use]
     pub const fn new(idx: f64) -> Self {
         Self { idx }
     }
 
-    #[inline]
-    #[must_use]
     fn reflectance(cos: f64, idx: f64) -> f64 {
         // Schlick's approximation for reflectance.
         let r0 = ((1.0 - idx) / (1.0 + idx)).powi(2);
@@ -154,7 +138,6 @@ impl Dielectric {
 }
 
 impl Material for Dielectric {
-    #[inline]
     fn scatter(&self, r: &Ray, rec: &HitRecord<'_>, rng: &mut ThreadRng) -> Option<Scatter> {
         let ratio = match rec.face {
             Face::Front => self.idx.recip(),

@@ -1,5 +1,3 @@
-#![allow(clippy::module_name_repetitions)]
-
 use crate::graphics::{Aabb, Material, Ray};
 use crate::math::{Point, Vec3};
 
@@ -23,8 +21,6 @@ impl Hit for Box<dyn Hit> {
 
 /// A record of a ray-object intersection. The `mat` field is a `&dyn Material` to avoid atomic
 /// operations in loops (e.g. cloning an `Arc<dyn Material>`).
-#[non_exhaustive]
-#[derive(Clone)]
 pub struct HitRecord<'a> {
     pub p: Point,
     pub normal: Vec3,
@@ -36,16 +32,12 @@ pub struct HitRecord<'a> {
 }
 
 /// The front or back of an object's surface.
-#[non_exhaustive]
-#[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Face {
     Front,
     Back,
 }
 
 impl<'a> HitRecord<'a> {
-    #[inline]
-    #[must_use]
     pub fn new(
         p: Point,
         normal: Vec3,
@@ -68,8 +60,6 @@ impl<'a> HitRecord<'a> {
 
     /// Get a [`Face`] and outward normal such that the normal always points against the incident
     /// [`Ray`].
-    #[inline]
-    #[must_use]
     pub fn face_normal(r: &Ray, outward_normal: Vec3) -> (Face, Vec3) {
         if r.direction.dot(outward_normal) < 0.0 {
             (Face::Front, outward_normal)

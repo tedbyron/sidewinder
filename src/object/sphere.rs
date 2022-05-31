@@ -15,8 +15,6 @@ pub struct Sphere {
 }
 
 impl Sphere {
-    #[inline]
-    #[must_use]
     pub fn new(center: Point, radius: f64, mat: Arc<dyn Material>) -> Self {
         Self {
             center,
@@ -25,8 +23,6 @@ impl Sphere {
         }
     }
 
-    #[inline]
-    #[must_use]
     pub fn uv(p: &Point) -> (f64, f64) {
         let theta = -p.y.acos();
         let phi = (-p.z).atan2(p.x) + PI;
@@ -36,7 +32,6 @@ impl Sphere {
 }
 
 impl Hit for Sphere {
-    #[allow(clippy::many_single_char_names)]
     fn hit(&self, r: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord<'_>> {
         let oc = r.origin - self.center;
         // Quadratic equation.
@@ -69,8 +64,6 @@ impl Hit for Sphere {
         Some(HitRecord::new(p, normal, &*self.mat, root, u, v, face))
     }
 
-    #[inline]
-    #[must_use]
     fn bounding_box(&self, _: f64, _: f64) -> Option<Aabb> {
         Some(Aabb::new(
             self.center - Point::new_all(self.radius),
@@ -91,8 +84,6 @@ pub struct MovingSphere {
 }
 
 impl MovingSphere {
-    #[inline]
-    #[must_use]
     pub fn new(
         center_start: Point,
         center_end: Point,
@@ -111,8 +102,6 @@ impl MovingSphere {
         }
     }
 
-    #[inline]
-    #[must_use]
     fn center(&self, t: f64) -> Point {
         self.center_start
             + ((t - self.t_start) / (self.t_end - self.t_start))
@@ -121,7 +110,6 @@ impl MovingSphere {
 }
 
 impl Hit for MovingSphere {
-    #[allow(clippy::many_single_char_names)]
     fn hit(&self, r: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord<'_>> {
         let oc = r.origin - self.center(r.t);
         let a = r.direction.len_squared();
@@ -151,8 +139,6 @@ impl Hit for MovingSphere {
         Some(HitRecord::new(p, normal, &*self.mat, root, u, v, face))
     }
 
-    #[inline]
-    #[must_use]
     fn bounding_box(&self, t_start: f64, t_end: f64) -> Option<Aabb> {
         let box_start = Aabb::new(
             self.center(t_start) - Point::new_all(self.radius),

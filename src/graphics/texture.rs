@@ -1,3 +1,4 @@
+use crate::graphics::Perlin;
 use crate::math::{Point, Rgb};
 
 pub trait Texture: Send + Sync {
@@ -28,54 +29,62 @@ macro_rules! texlist {
     }};
 }
 
-/// A solid color.
-#[derive(Clone, Copy)]
+/// Texture with a solid color.
 pub struct Solid {
     color: Rgb,
 }
 
 impl Solid {
-    #[inline]
-    #[must_use]
     pub const fn new(color: Rgb) -> Self {
         Self { color }
     }
 }
 
 impl Texture for Solid {
-    #[inline]
     fn value(&self, _u: f64, _v: f64, _p: &Point) -> Rgb {
         self.color
     }
 }
 
-/// A checkered texture.
+/// Checkered texture.
 pub struct Checkered {
     even: Box<dyn Texture>,
     odd: Box<dyn Texture>,
 }
 
 impl Checkered {
-    #[inline]
-    #[must_use]
     pub const fn new(even: Box<dyn Texture>, odd: Box<dyn Texture>) -> Self {
         Self { even, odd }
     }
 
-    #[inline]
-    #[must_use]
     pub fn from_colors(even: Rgb, odd: Rgb) -> Self {
         Self::new(Box::new(Solid::new(even)), Box::new(Solid::new(odd)))
     }
 }
 
 impl Texture for Checkered {
-    #[inline]
     fn value(&self, u: f64, v: f64, p: &Point) -> Rgb {
         if (10.0 * p.x).sin() * (10.0 * p.y).sin() * (10.0 * p.z).sin() < 0.0 {
             self.even.value(u, v, p)
         } else {
             self.odd.value(u, v, p)
         }
+    }
+}
+
+/// Noise texture.
+pub struct Noise {
+    perlin: Perlin,
+}
+
+impl Noise {
+    pub const fn new(perlin: Perlin) -> Self {
+        Self { perlin }
+    }
+}
+
+impl Texture for Noise {
+    fn value(&self, _u: f64, _v: f64, p: &Point) -> Rgb {
+        Rgb::ONE * self.perlin.noise(p)
     }
 }
