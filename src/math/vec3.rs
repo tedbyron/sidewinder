@@ -22,9 +22,9 @@ pub type Point = Vec3;
 pub type Rgb = Vec3;
 
 impl Vec3 {
-    /// A vector in which all components are equal to 0.0.
+    /// A vector in which all components are equal to 0.
     pub const ZERO: Self = Self::newi(0, 0, 0);
-    /// A vector in which all components are equal to 1.0.
+    /// A vector in which all components are equal to 1.
     pub const ONE: Self = Self::newi(1, 1, 1);
 
     pub const fn newf(x: f64, y: f64, z: f64) -> Self {
