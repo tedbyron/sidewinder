@@ -1,5 +1,7 @@
-use crate::graphics::Perlin;
-use crate::math::{Point, Rgb};
+use crate::{
+    graphics::Perlin,
+    math::{Point, Rgb},
+};
 
 pub trait Texture: Send + Sync {
     fn value(&self, u: f64, v: f64, p: &Point) -> Rgb;

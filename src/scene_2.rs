@@ -2,9 +2,11 @@
 
 use std::sync::Arc;
 
-use sidewinder::graphics::{Checkered, HitList, Lambertian};
-use sidewinder::math::{Point, Rgb};
-use sidewinder::object::Sphere;
+use sidewinder::{
+    graphics::{Checkered, HitList, Lambertian},
+    math::{Point, Rgb},
+    object::Sphere,
+};
 
 #[allow(dead_code)]
 pub fn two_spheres() -> HitList {

@@ -2,8 +2,10 @@ use std::mem;
 
 use strum::IntoEnumIterator;
 
-use crate::graphics::Ray;
-use crate::math::{Axis, Point};
+use crate::{
+    graphics::Ray,
+    math::{Axis, Point},
+};
 
 /// An axis-aligned bounding box.
 #[derive(Clone, Copy)]
@@ -39,7 +41,7 @@ impl Aabb {
         true
     }
 
-    pub fn surrounding_box(self, other: Self) -> Self {
+    pub const fn surrounding_box(self, other: Self) -> Self {
         let small = Point::newf(
             self.min.x.min(other.min.x),
             self.min.y.min(other.min.y),

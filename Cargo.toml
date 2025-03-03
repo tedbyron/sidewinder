@@ -11,12 +11,13 @@ keywords = ["graphics", "3d", "ray-tracing", "path-tracing", "rendering"]
 categories = ["rendering"]
 
 [dependencies]
-clap = { version = "3.1.18", features = ["derive"] }
-indicatif = "0.17.0-rc.11"
-once_cell = { version = "1.12.0", features = ["parking_lot"] }
-rand = "0.8.5"
-rayon = "1.5.3"
-strum = { version = "0.24.0", features = ["derive"] }
+anyhow = "1.0.96"
+clap = { version = "4.5.31", features = ["derive"] }
+image = { version = "0.25.5", features = ["png", "rayon"], default-features = false }
+indicatif = "0.17.11"
+rand = "0.9.0"
+rayon = "1.10.0"
+strum = { version = "0.27.1", features = ["derive"] }
 
 [profile.release]
 codegen-units = 1

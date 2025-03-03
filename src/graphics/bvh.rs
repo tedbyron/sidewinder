@@ -1,10 +1,11 @@
 use std::cmp::Ordering;
 
-use rand::distributions::Standard;
-use rand::prelude::*;
+use rand::{distr::StandardUniform, prelude::*};
 
-use crate::graphics::{Aabb, Hit, HitRecord, Ray};
-use crate::math::Axis;
+use crate::{
+    graphics::{Aabb, Hit, HitRecord, Ray},
+    math::Axis,
+};
 
 /// A bounding volume hierarchy.
 pub struct Bvh {
@@ -42,7 +43,7 @@ impl Bvh {
                 }
             }
             _ => {
-                let axis = Standard.sample(rng);
+                let axis = StandardUniform.sample(rng);
                 objects.sort_unstable_by(|l, r| Self::box_cmp(l, r, axis));
                 let left = Box::new(Self::new(
                     objects.drain(..objects.len() / 2).collect(),
@@ -93,14 +94,7 @@ impl Hit for Bvh {
                 if left.is_some() {
                     left
                 } else {
-                    right.hit(
-                        r,
-                        t_min,
-                        match left {
-                            Some(ref rec) => rec.t,
-                            None => t_max,
-                        },
-                    )
+                    right.hit(r, t_min, left.as_ref().map_or(t_max, |rec| rec.t))
                 }
             }
             Node::Leaf(node) => node.hit(r, t_min, t_max),

@@ -1,17 +1,24 @@
 #![warn(clippy::all, clippy::cargo, clippy::nursery, rust_2018_idioms)]
 #![doc = include_str!("../README.md")]
 
-use std::fs::OpenOptions;
-use std::io::{self, BufWriter, Write};
-use std::time::Instant;
+use std::{
+    fs::OpenOptions,
+    io::{self, BufWriter, Write},
+    path::Path,
+    time::Instant,
+};
 
+use anyhow::{Result, bail};
 use clap::Parser;
+use image::{ImageBuffer, Rgb as ImageRgb};
 use indicatif::{HumanDuration, ProgressBar};
 use rand::prelude::Distribution;
 use rayon::prelude::*;
-use sidewinder::camera::Camera;
-use sidewinder::math::{Point, Rgb, Vec3};
-use sidewinder::rng::CLOSED_OPEN_01;
+use sidewinder::{
+    camera::Camera,
+    math::{Point, Rgb, Vec3},
+    rng::CLOSED_OPEN_01,
+};
 
 mod scene_1;
 mod scene_2;
@@ -21,19 +28,19 @@ mod scene_3;
 #[clap(author, version, about, long_about = None)]
 struct Args {
     /// Image width.
-    #[clap(short = 'w', long = "width", default_value_t = 400)]
+    #[clap(short = 'w', long = "width", default_value_t = 450)]
     image_width: u32,
 
     /// Image aspect ratio.
-    #[clap(short = 'r', long, default_value_t = 16.0 / 9.0)]
+    #[clap(short = 'r', long, default_value_t = 1.5)]
     aspect_ratio: f64,
 
     /// Antialiasing samples per pixel.
-    #[clap(short, long = "samples", default_value_t = 100)]
+    #[clap(short, long = "samples", default_value_t = 50)]
     samples_per_pixel: u32,
 
     /// Diffuse reflection recursion depth.
-    #[clap(short = 'd', long = "depth", default_value_t = 50)]
+    #[clap(short = 'd', long = "depth", default_value_t = 100)]
     max_depth: usize,
 
     /// Output path.
@@ -45,7 +52,7 @@ struct Args {
     force: bool,
 }
 
-fn main() -> io::Result<()> {
+fn main() -> Result<()> {
     let Args {
         image_width,
         aspect_ratio,
@@ -101,7 +108,7 @@ fn main() -> io::Result<()> {
                 bar.inc(1);
             }
 
-            let mut rng = rand::thread_rng();
+            let mut rng = rand::rng();
             let mut pixel = Rgb::ZERO;
 
             for _ in 0..samples_per_pixel {
@@ -115,32 +122,54 @@ fn main() -> io::Result<()> {
             pixel
         })
         .collect::<Vec<Rgb>>(); // TODO: avoid intermediate allocation
-                                // may require a parallel to sequential adapter
-                                // https://github.com/rayon-rs/rayon/issues/210
+    // may require a parallel to sequential adapter
+    // https://github.com/rayon-rs/rayon/issues/210
 
     bar.finish_and_clear();
-    let bar = ProgressBar::new_spinner().with_message("Writing to stdout...");
+    let bar = ProgressBar::new_spinner().with_message(format!(
+        "Writing to {}...",
+        output_path.as_ref().map_or("stdout", |path| path)
+    ));
 
-    let write_output = |buf: &mut dyn Write| -> io::Result<()> {
+    // Write the image to a PPM file.
+    let write_ppm = |buf: &mut dyn Write| -> Result<()> {
         writeln!(buf, "P3\n{image_width} {image_height}\n255")?;
-
-        for pixel in pixels {
+        for pixel in &pixels {
             pixel.write(buf, samples_per_pixel)?;
         }
-
+        buf.flush()?;
         Ok(())
     };
 
+    // Write the image to the specified output.
     if let Some(ref path) = output_path {
-        let file = OpenOptions::new().write(true).truncate(force).open(path)?;
-        let mut buf = BufWriter::new(file);
-        write_output(&mut buf)?;
+        let path = Path::new(path);
+        if path
+            .extension()
+            .is_some_and(|ext| ext.eq_ignore_ascii_case("png"))
+        {
+            let Some(buf) = ImageBuffer::<ImageRgb<u8>, _>::from_raw(
+                image_width,
+                image_height,
+                pixels
+                    .iter()
+                    .flat_map(|p| p.to_rgb8(samples_per_pixel))
+                    .collect::<Box<[_]>>(),
+            ) else {
+                bail!("Error: couldn't create image buffer");
+            };
+            buf.save(path)?;
+        } else {
+            let file = OpenOptions::new().write(true).truncate(force).open(path)?;
+            let mut buf = BufWriter::new(file);
+            write_ppm(&mut buf)?;
+        }
     } else {
         let stdout = io::stdout();
         let lock = stdout.lock();
         let mut buf = BufWriter::new(lock);
-        write_output(&mut buf)?;
-    };
+        write_ppm(&mut buf)?;
+    }
 
     let elapsed = HumanDuration(timer.elapsed());
     bar.finish_with_message(format!("Done in {elapsed}"));

@@ -1,11 +1,11 @@
-use std::io;
-use std::io::Write;
-use std::ops;
+use std::{io, io::Write, ops};
 
 use rand::prelude::*;
 
-use crate::math::Axis;
-use crate::rng::{CLOSED_OPEN_01, CLOSED_OPEN_N11};
+use crate::{
+    math::Axis,
+    rng::{CLOSED_OPEN_01, CLOSED_OPEN_N11},
+};
 
 /// A vector in 3D Euclidean space (**R**³).
 #[non_exhaustive]
@@ -97,6 +97,22 @@ impl Vec3 {
         let parallel = -(1.0 - perpendicular.len_squared()).abs().sqrt() * normal;
 
         perpendicular + parallel
+    }
+
+    /// RGB8 values scaled and gamma-corrected.
+    pub fn to_rgb8(self, samples: u32) -> [u8; 3] {
+        let scale = f64::from(samples).recip();
+
+        // Gamma correction.
+        let scaled_r = (self.x * scale).sqrt();
+        let scaled_g = (self.y * scale).sqrt();
+        let scaled_b = (self.z * scale).sqrt();
+
+        let r = (256.0 * scaled_r.clamp(0.0, 0.999)) as u8;
+        let g = (256.0 * scaled_g.clamp(0.0, 0.999)) as u8;
+        let b = (256.0 * scaled_b.clamp(0.0, 0.999)) as u8;
+
+        [r, g, b]
     }
 
     /// Write an [`Rgb`] color into a buffer.

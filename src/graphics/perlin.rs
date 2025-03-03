@@ -14,11 +14,11 @@ impl Perlin {
     const POINT_COUNT: usize = 256;
 
     pub fn new() -> Self {
-        let rng = &mut rand::thread_rng();
+        let rng = &mut rand::rng();
         let rand_f = {
             let mut rand_f = [0.0; Self::POINT_COUNT];
-            for f in rand_f.iter_mut() {
-                *f = rng.gen();
+            for f in &mut rand_f {
+                *f = rng.random();
             }
             rand_f
         };
@@ -49,11 +49,9 @@ impl Perlin {
         for di in 0..2 {
             for dj in 0..2 {
                 for dk in 0..2 {
-                    c[di][dj][dk] = self.rand_f[
-                        self.perm_x[(i + di) & 255] ^
-                        self.perm_y[(j + dj) & 255] ^
-                        self.perm_z[(k + dk) & 255]
-                    ];
+                    c[di][dj][dk] = self.rand_f[self.perm_x[(i + di) & 255]
+                        ^ self.perm_y[(j + dj) & 255]
+                        ^ self.perm_z[(k + dk) & 255]];
                 }
             }
         }
@@ -69,7 +67,7 @@ impl Perlin {
         }
 
         for i in (1..p.len()).rev() {
-            let target = rng.gen_range(0..i);
+            let target = rng.random_range(0..i);
             p.swap(i, target);
         }
 
@@ -83,9 +81,10 @@ impl Perlin {
         for i in 0..2 {
             for j in 0..2 {
                 for k in 0..2 {
-                    acc += (i as f64).mul_add(u, (1.0 - i as f64) * (1.0 - u)) *
-                        (j as f64).mul_add(v, (1.0 - j as f64) * (1.0 - v)) *
-                        (k as f64).mul_add(w, (1.0 - k as f64) * (1.0 - w)) * c[i][j][k];
+                    acc += (i as f64).mul_add(u, (1.0 - i as f64) * (1.0 - u))
+                        * (j as f64).mul_add(v, (1.0 - j as f64) * (1.0 - v))
+                        * (k as f64).mul_add(w, (1.0 - k as f64) * (1.0 - w))
+                        * c[i][j][k];
                 }
             }
         }

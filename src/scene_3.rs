@@ -2,9 +2,11 @@
 
 use std::sync::Arc;
 
-use sidewinder::graphics::{HitList, Lambertian, Noise, Perlin};
-use sidewinder::math::Point;
-use sidewinder::object::Sphere;
+use sidewinder::{
+    graphics::{HitList, Lambertian, Noise, Perlin},
+    math::Point,
+    object::Sphere,
+};
 
 #[allow(dead_code)]
 pub fn two_perlin_spheres() -> HitList {

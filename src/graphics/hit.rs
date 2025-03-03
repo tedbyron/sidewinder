@@ -1,5 +1,7 @@
-use crate::graphics::{Aabb, Material, Ray};
-use crate::math::{Point, Vec3};
+use crate::{
+    graphics::{Aabb, Material, Ray},
+    math::{Point, Vec3},
+};
 
 /// Abstraction for objects whose surface may intersect a [`Ray`].
 pub trait Hit: Send + Sync {
@@ -22,7 +24,7 @@ impl Hit for Box<dyn Hit> {
 /// A record of a ray-object intersection. The `mat` field is a `&dyn Material` to avoid atomic
 /// operations in loops (e.g. cloning an `Arc<dyn Material>`).
 pub struct HitRecord<'a> {
-    pub p: Point,
+    pub point: Point,
     pub normal: Vec3,
     pub mat: &'a dyn Material,
     pub t: f64,
@@ -39,7 +41,7 @@ pub enum Face {
 
 impl<'a> HitRecord<'a> {
     pub fn new(
-        p: Point,
+        point: Point,
         normal: Vec3,
         mat: &'a dyn Material,
         t: f64,
@@ -48,7 +50,7 @@ impl<'a> HitRecord<'a> {
         face: Face,
     ) -> Self {
         Self {
-            p,
+            point,
             normal,
             mat,
             t,
@@ -78,12 +80,9 @@ impl Hit for HitList {
         let mut closest_so_far = t_max;
 
         for object in self {
-            match object.hit(r, t_min, closest_so_far) {
-                Some(hit) => {
-                    closest_so_far = hit.t;
-                    rec = Some(hit);
-                }
-                None => continue,
+            if let Some(hit) = object.hit(r, t_min, closest_so_far) {
+                closest_so_far = hit.t;
+                rec = Some(hit);
             }
         }
 

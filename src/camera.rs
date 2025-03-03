@@ -1,8 +1,9 @@
-use rand::distributions::Uniform;
-use rand::prelude::*;
+use rand::{distr::Uniform, prelude::*};
 
-use crate::graphics::Ray;
-use crate::math::{Point, Vec3};
+use crate::{
+    graphics::Ray,
+    math::{Point, Vec3},
+};
 
 #[non_exhaustive]
 pub struct Camera {
@@ -51,7 +52,7 @@ impl Camera {
             u,
             v,
             lens_radius: aperture / 2.0,
-            dist: Uniform::from(t_start..t_end),
+            dist: Uniform::new_inclusive(t_start, t_end).unwrap(),
         }
     }
 

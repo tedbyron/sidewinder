@@ -2,9 +2,11 @@ use std::sync::Arc;
 
 use rand::prelude::*;
 
-use crate::graphics::{Face, HitRecord, Ray, Texture};
-use crate::math::{Rgb, Vec3};
-use crate::rng::CLOSED_OPEN_01;
+use crate::{
+    graphics::{Face, HitRecord, Ray, Texture},
+    math::{Rgb, Vec3},
+    rng::CLOSED_OPEN_01,
+};
 
 /// Trait for object materials to define how they scatter [`Ray`]s.
 pub trait Material: Send + Sync {
@@ -74,10 +76,10 @@ impl Material for Lambertian {
             direction = rec.normal;
         }
 
-        let scattered = Ray::new(rec.p, direction, r.t);
+        let scattered = Ray::new(rec.point, direction, r.t);
         Some(Scatter::new(
             scattered,
-            self.albedo.value(rec.u, rec.v, &rec.p),
+            self.albedo.value(rec.u, rec.v, &rec.point),
         ))
     }
 }
@@ -92,7 +94,7 @@ pub struct Metallic {
 }
 
 impl Metallic {
-    pub fn new(albedo: Rgb, blur: f64) -> Self {
+    pub const fn new(albedo: Rgb, blur: f64) -> Self {
         Self {
             albedo,
             blur: blur.min(1.0),
@@ -104,7 +106,7 @@ impl Material for Metallic {
     fn scatter(&self, r: &Ray, rec: &HitRecord<'_>, rng: &mut ThreadRng) -> Option<Scatter> {
         let reflected = r.direction.unit().reflect(rec.normal);
         let scattered = Ray::new(
-            rec.p,
+            rec.point,
             reflected + self.blur * Vec3::random_in_unit_sphere(rng),
             r.t,
         );
@@ -153,7 +155,7 @@ impl Material for Dielectric {
         } else {
             unit_direction.refract(rec.normal, ratio)
         };
-        let scattered = Ray::new(rec.p, direction, r.t);
+        let scattered = Ray::new(rec.point, direction, r.t);
 
         Some(Scatter::new(scattered, Rgb::ONE))
     }

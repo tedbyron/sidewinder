@@ -1,10 +1,11 @@
 #![allow(clippy::module_name_repetitions)]
 
-use std::f64::consts::PI;
-use std::sync::Arc;
+use std::{f64::consts::PI, sync::Arc};
 
-use crate::graphics::{Aabb, Hit, HitRecord, Material, Ray};
-use crate::math::Point;
+use crate::{
+    graphics::{Aabb, Hit, HitRecord, Material, Ray},
+    math::Point,
+};
 
 /// A sphere object.
 #[non_exhaustive]
@@ -110,10 +111,10 @@ impl MovingSphere {
 }
 
 impl Hit for MovingSphere {
-    fn hit(&self, r: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord<'_>> {
-        let oc = r.origin - self.center(r.t);
-        let a = r.direction.len_squared();
-        let half_b = oc.dot(r.direction);
+    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord<'_>> {
+        let oc = ray.origin - self.center(ray.t);
+        let a = ray.direction.len_squared();
+        let half_b = oc.dot(ray.direction);
         let c = self.radius.mul_add(-self.radius, oc.len_squared());
         let discriminant = half_b.mul_add(half_b, -(a * c));
 
@@ -131,12 +132,12 @@ impl Hit for MovingSphere {
             }
         }
 
-        let p = r.at(root);
-        let outward_normal = (p - self.center(r.t)) / self.radius;
+        let point = ray.at(root);
+        let outward_normal = (point - self.center(ray.t)) / self.radius;
         let (u, v) = Sphere::uv(&outward_normal);
-        let (face, normal) = HitRecord::face_normal(r, outward_normal);
+        let (face, normal) = HitRecord::face_normal(ray, outward_normal);
 
-        Some(HitRecord::new(p, normal, &*self.mat, root, u, v, face))
+        Some(HitRecord::new(point, normal, &*self.mat, root, u, v, face))
     }
 
     fn bounding_box(&self, t_start: f64, t_end: f64) -> Option<Aabb> {

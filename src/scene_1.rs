@@ -2,12 +2,13 @@
 
 use std::sync::Arc;
 
-use rand::distributions::Uniform;
-use rand::prelude::Distribution;
-use sidewinder::graphics::{Checkered, Dielectric, HitList, Lambertian, Metallic, Solid};
-use sidewinder::math::{Point, Rgb, Vec3};
-use sidewinder::object::{MovingSphere, Sphere};
-use sidewinder::rng::CLOSED_OPEN_01;
+use rand::distr::{Distribution, Uniform};
+use sidewinder::{
+    graphics::{Checkered, Dielectric, HitList, Lambertian, Metallic, Solid},
+    math::{Point, Rgb, Vec3},
+    object::{MovingSphere, Sphere},
+    rng::CLOSED_OPEN_01,
+};
 
 #[allow(dead_code)]
 pub fn setup() -> HitList {
@@ -28,9 +29,9 @@ pub fn setup() -> HitList {
         Sphere::new(Point::newi(4, 1, 0), 1.0, mats["metallic"].clone()),
     ];
 
-    let mut rng = rand::thread_rng();
-    let uniform_0_p5 = Uniform::<f64>::from(0.0..0.5);
-    let uniform_p5_1 = Uniform::<f64>::from(0.5..1.0);
+    let mut rng = rand::rng();
+    let uniform_0_p5 = Uniform::<f64>::new_inclusive(0.0, 0.5).unwrap();
+    let uniform_p5_1 = Uniform::<f64>::new_inclusive(0.5, 1.0).unwrap();
     let offset = Point::newf(4.0, 0.2, 0.0);
 
     for a in -11..11 {

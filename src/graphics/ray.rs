@@ -1,8 +1,12 @@
 use rand::prelude::*;
 
-use crate::graphics::{Hit, HitList};
-use crate::math::{Point, Rgb, Vec3};
+use crate::{
+    graphics::{Hit, HitList},
+    math::{Point, Rgb, Vec3},
+};
 
+/// Calculates the color seen along a ray.
+///
 /// **P**(*t*) = **A** + *t***b** where **P** is a position along a 3D line, **A** is the ray
 /// origin, and **b** is the ray direction. Change *t*, the distance from the origin, to affect the
 /// color seen along the ray.
@@ -41,7 +45,7 @@ impl Ray {
         if let Some(ref rec) = world.hit(self, 0.001, f64::INFINITY) {
             match rec.mat.scatter(self, rec, rng) {
                 Some(scattered) => {
-                    return scattered.attenuation * scattered.ray.color(world, depth - 1, rng)
+                    return scattered.attenuation * scattered.ray.color(world, depth - 1, rng);
                 }
                 None => return Rgb::ZERO,
             }
