@@ -35,28 +35,33 @@ impl Perlin {
     }
 
     pub fn noise(&self, p: &Point) -> f64 {
-        let u = p.x - p.x.floor();
-        let v = p.y - p.y.floor();
-        let w = p.z - p.z.floor();
+        // let u = p.x - p.x.floor();
+        // let v = p.y - p.y.floor();
+        // let w = p.z - p.z.floor();
 
-        let i = p.x.floor() as usize;
-        let j = p.y.floor() as usize;
-        let k = p.z.floor() as usize;
+        // let i = p.x.floor() as usize;
+        // let j = p.y.floor() as usize;
+        // let k = p.z.floor() as usize;
 
-        let mut c = [[[0.0; 2]; 2]; 2];
+        // let mut c = [[[0.0; 2]; 2]; 2];
 
-        #[allow(clippy::needless_range_loop)]
-        for di in 0..2 {
-            for dj in 0..2 {
-                for dk in 0..2 {
-                    c[di][dj][dk] = self.rand_f[self.perm_x[(i + di) & 255]
-                        ^ self.perm_y[(j + dj) & 255]
-                        ^ self.perm_z[(k + dk) & 255]];
-                }
-            }
-        }
+        // #[allow(clippy::needless_range_loop)]
+        // for di in 0..2 {
+        //     for dj in 0..2 {
+        //         for dk in 0..2 {
+        //             c[di][dj][dk] = self.rand_f[self.perm_x[(i + di) & 255]
+        //                 ^ self.perm_y[(j + dj) & 255]
+        //                 ^ self.perm_z[(k + dk) & 255]];
+        //         }
+        //     }
+        // }
 
-        Self::interpolate(c, u, v, w)
+        // Self::interpolate(c, u, v, w)
+        let i = (4.0 * p.x) as usize & 255;
+        let j = (4.0 * p.y) as usize & 255;
+        let k = (4.0 * p.z) as usize & 255;
+
+        self.rand_f[self.perm_x[i] ^ self.perm_y[j] ^ self.perm_z[k]]
     }
 
     fn gen_perm(rng: &mut ThreadRng) -> [usize; Self::POINT_COUNT] {

@@ -114,15 +114,11 @@ impl Hit for HitList {
 /// Creates a `Vec` of objects that implement [`Hit`].
 #[macro_export]
 macro_rules! hitlist {
-    () => {
-        Hitlist::default()
-    };
-
     ( $($x:expr),* $(,)? ) => {
         {
-            let mut tmp = HitList::default();
-            $(tmp.push(Box::new($x));)*
-            tmp
+            let mut list = HitList::default();
+            $(list.push(Box::new($x));)*
+            list
         }
     };
 }

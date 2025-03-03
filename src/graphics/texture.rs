@@ -10,24 +10,15 @@ pub trait Texture: Send + Sync {
 /// Creates a `HashMap` with `String` keys and `Arc<dyn Texture>` values.
 #[macro_export]
 macro_rules! texlist {
-    () => {
-        use std::collections::HashMap;
-        use std::sync::Arc;
-
-        use sidewinder::graphics::Texture;
-
-        HashMap::<String, Arc<dyn Texture>>::default()
-    };
-
     ( $($x:literal : $y:expr),* $(,)? ) => {{
         use std::collections::HashMap;
         use std::sync::Arc;
 
         use sidewinder::graphics::Texture;
 
-        let mut tmp: HashMap<String, Arc<dyn Texture>> = HashMap::default();
-        $(tmp.insert($x.to_string(), Arc::new($y));)*
-        tmp
+        let mut map: HashMap<String, Arc<dyn Texture>> = HashMap::default();
+        $(map.insert($x.to_string(), Arc::new($y));)*
+        map
     }};
 }
 

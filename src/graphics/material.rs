@@ -18,24 +18,15 @@ pub trait Material: Send + Sync {
 /// Creates a `HashMap` with `String` keys and `Arc<dyn Material>` values.
 #[macro_export]
 macro_rules! matlist {
-    () => {
-        use std::collections::HashMap;
-        use std::sync::Arc;
-
-        use sidewinder::graphics::Material;
-
-        HashMap::<String, Arc<dyn Material>>::default()
-    };
-
     ( $($x:literal : $y:expr),* $(,)? ) => {{
         use std::collections::HashMap;
         use std::sync::Arc;
 
         use sidewinder::graphics::Material;
 
-        let mut tmp: HashMap<String, Arc<dyn Material>> = HashMap::default();
-        $(tmp.insert($x.to_string(), Arc::new($y));)*
-        tmp
+        let mut map: HashMap<String, Arc<dyn Material>> = HashMap::default();
+        $(map.insert($x.to_string(), Arc::new($y));)*
+        map
     }};
 }
 

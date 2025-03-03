@@ -2,7 +2,7 @@
 #![doc = include_str!("../README.md")]
 
 use std::{
-    fs::OpenOptions,
+    fs::{self, File, OpenOptions},
     io::{self, BufWriter, Write},
     path::Path,
     time::Instant,
@@ -10,9 +10,9 @@ use std::{
 
 use anyhow::{Result, bail};
 use clap::Parser;
-use image::{ImageBuffer, Rgb as ImageRgb};
+use image::ImageBuffer;
 use indicatif::{HumanDuration, ProgressBar};
-use rand::prelude::Distribution;
+use rand::distr::Distribution;
 use rayon::prelude::*;
 use sidewinder::{
     camera::Camera,
@@ -53,6 +53,8 @@ struct Args {
 }
 
 fn main() -> Result<()> {
+    let world = scene_3::two_perlin_spheres();
+
     let Args {
         image_width,
         aspect_ratio,
@@ -70,7 +72,6 @@ fn main() -> Result<()> {
     }
 
     let image_width_f = f64::from(image_width);
-
     let image_height_f = if (image_width_f / aspect_ratio).fract() < f64::EPSILON {
         image_width_f / aspect_ratio
     } else {
@@ -78,21 +79,14 @@ fn main() -> Result<()> {
     };
     let image_height = image_height_f as u32;
 
-    let world = scene_3::two_perlin_spheres();
-
-    let from = Point::newi(13, 2, 3);
-    let to = Point::newi(0, 0, 0);
-    let v_up = Vec3::newi(0, 1, 0);
-    let focus_dist = 10.0;
-    let aperture = 0.1;
     let camera = Camera::new(
-        from,
-        to,
-        v_up,
+        Point::newi(13, 2, 3),
+        Point::newi(0, 0, 0),
+        Vec3::newi(0, 1, 0),
         20.0,
         aspect_ratio,
-        aperture,
-        focus_dist,
+        0.1,
+        10.0,
         0.0,
         1.0,
     );
@@ -148,7 +142,10 @@ fn main() -> Result<()> {
             .extension()
             .is_some_and(|ext| ext.eq_ignore_ascii_case("png"))
         {
-            let Some(buf) = ImageBuffer::<ImageRgb<u8>, _>::from_raw(
+            if force && path.exists() {
+                fs::remove_file(path)?;
+            }
+            let Some(buf) = ImageBuffer::<image::Rgb<u8>, _>::from_raw(
                 image_width,
                 image_height,
                 pixels

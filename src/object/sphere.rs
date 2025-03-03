@@ -25,7 +25,7 @@ impl Sphere {
     }
 
     pub fn uv(p: &Point) -> (f64, f64) {
-        let theta = -p.y.acos();
+        let theta = (-p.y).acos();
         let phi = (-p.z).atan2(p.x) + PI;
 
         (phi / (2.0 * PI), theta / PI)
